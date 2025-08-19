@@ -65,6 +65,60 @@ export function useSubscriptions(initialSubsRef, markDirty) {
     }
   }
 
+  // 为每个订阅设置单独的更新定时器
+  function setupIndividualUpdateTimers() {
+    // 清除所有单独的定时器
+    clearIndividualUpdateTimers();
+
+    // 为每个启用的订阅设置单独的定时器
+    subscriptions.value.forEach(sub => {
+      if (sub.enabled && sub.url.startsWith('http') && sub.updateInterval && sub.updateInterval > 0) {
+        const timerId = setInterval(async () => {
+          try {
+            const result = await batchUpdateNodes([sub.id]);
+            
+            if (result.success) {
+              // 更新本地数据
+              result.results.forEach(updateResult => {
+                if (updateResult.success) {
+                  const subToUpdate = subscriptions.value.find(s => s.id === updateResult.id);
+                  if (subToUpdate) {
+                    subToUpdate.nodeCount = updateResult.nodeCount;
+                    // userInfo会在下次数据同步时更新
+                  }
+                }
+              });
+              
+              const successCount = result.results.filter(r => r.success).length;
+              showToast(`订阅 ${sub.name || ''} 自动更新完成！`, 'success');
+              markDirty();
+            } else {
+              console.error(`Individual auto update failed for ${sub.name}:`, result.message);
+            }
+          } catch (error) {
+            console.error(`Individual auto update error for ${sub.name}:`, error);
+          }
+        }, sub.updateInterval * 60 * 1000); // 将分钟转换为毫秒
+
+        // 存储定时器ID，以便后续清理
+        if (!sub.updateTimers) {
+          sub.updateTimers = [];
+        }
+        sub.updateTimers.push(timerId);
+      }
+    });
+  }
+
+  // 清除所有单独的定时器
+  function clearIndividualUpdateTimers() {
+    subscriptions.value.forEach(sub => {
+      if (sub.updateTimers && sub.updateTimers.length > 0) {
+        sub.updateTimers.forEach(timerId => clearInterval(timerId));
+        sub.updateTimers = [];
+      }
+    });
+  }
+
   function initializeSubscriptions(subsData) {
     subscriptions.value = (subsData || []).map(sub => ({
       ...sub,
@@ -74,9 +128,10 @@ export function useSubscriptions(initialSubsRef, markDirty) {
       isUpdating: false,
       userInfo: sub.userInfo || null,
       exclude: sub.exclude || '', // 新增 exclude 属性
+      updateInterval: sub.updateInterval || null, // 新增订阅单独更新时间属性
     }));
     // [最終修正] 移除此處的自動更新迴圈，以防止本地開發伺服器因併發請求過多而崩潰。
-    // subscriptions.value.forEach(sub => handleUpdateNodeCount(sub.id, true)); 
+    // subscriptions.value.forEach(sub => handleUpdateNodeCount(sub.id, true));
   }
 
   const enabledSubscriptions = computed(() => subscriptions.value.filter(s => s.enabled));
@@ -219,9 +274,21 @@ export function useSubscriptions(initialSubsRef, markDirty) {
     setupAutoUpdate();
   }
 
+  // 订阅单独更新间隔设置变更处理
+  function handleSubscriptionUpdateIntervalChange(subId, newInterval) {
+    const sub = subscriptions.value.find(s => s.id === subId);
+    if (sub) {
+      sub.updateInterval = newInterval;
+      // 重新设置所有单独的定时器
+      setupIndividualUpdateTimers();
+    }
+  }
+
   // 组件挂载时初始化
   onMounted(() => {
     initializeUpdateInterval();
+    // 初始化单独的更新定时器
+    setupIndividualUpdateTimers();
   });
 
   // 组件卸载时清理定时器
@@ -230,6 +297,8 @@ export function useSubscriptions(initialSubsRef, markDirty) {
       clearInterval(updateTimer);
       updateTimer = null;
     }
+    // 清除所有单独的定时器
+    clearIndividualUpdateTimers();
   });
 
   watch(initialSubsRef, (newInitialSubs) => {
@@ -252,5 +321,6 @@ export function useSubscriptions(initialSubsRef, markDirty) {
     handleUpdateNodeCount,
     updateInterval,
     handleUpdateIntervalChange,
+    handleSubscriptionUpdateIntervalChange,
   };
 }

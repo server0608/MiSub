@@ -37,6 +37,7 @@ const {
   subscriptions, subsCurrentPage, subsTotalPages, paginatedSubscriptions, totalRemainingTraffic,
   changeSubsPage, addSubscription, updateSubscription, deleteSubscription, deleteAllSubscriptions,
   addSubscriptionsFromBulk, handleUpdateNodeCount, updateInterval, handleUpdateIntervalChange,
+  handleSubscriptionUpdateIntervalChange,
 } = useSubscriptions(initialSubs, markDirty);
 
 const {
@@ -409,12 +410,25 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
         <div><label for="sub-edit-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">订阅名称</label><input type="text" id="sub-edit-name" v-model="editingSubscription.name" placeholder="（自动识别或自定义）" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" /></div>
         <div><label for="sub-edit-url" class="block text-sm font-medium text-gray-700 dark:text-gray-300">订阅链接</label><input type="text" id="sub-edit-url" v-model="editingSubscription.url" placeholder="http(s)://..." class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" /></div>
         <div>
+          <label for="sub-edit-update-interval" class="block text-sm font-medium text-gray-700 dark:text-gray-300">自定义更新间隔（分钟）</label>
+          <input
+            type="number"
+            id="sub-edit-update-interval"
+            v-model="editingSubscription.updateInterval"
+            min="5"
+            max="1440"
+            placeholder="留空则使用全局设置"
+            class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white"
+          >
+          <p class="text-xs text-gray-400 mt-1">设置此订阅的单独更新时间间隔，范围为5-1440分钟（24小时）。留空则使用全局设置。</p>
+        </div>
+        <div>
           <label for="sub-edit-exclude" class="block text-sm font-medium text-gray-700 dark:text-gray-300">包含/排除节点</label>
-          <textarea 
-            id="sub-edit-exclude" 
+          <textarea
+            id="sub-edit-exclude"
             v-model="editingSubscription.exclude"
             placeholder="[排除模式 (默认)]&#10;proto:vless,trojan&#10;(过期|官网)&#10;---&#10;[包含模式 (只保留匹配项)]&#10;keep:(香港|HK)&#10;keep:proto:ss"
-            rows="5" 
+            rows="5"
             class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
           ></textarea>
           <p class="text-xs text-gray-400 mt-1">每行一条规则。使用 <code>keep:</code> 切换为白名单模式。</p>
