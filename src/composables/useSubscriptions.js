@@ -3,7 +3,7 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { fetchNodeCount, batchUpdateNodes, fetchSettings } from '../lib/api.js';
 import { useToastStore } from '../stores/toast.js';
 
-export function useSubscriptions(initialSubsRef, markDirty) {
+export function useSubscriptions(initialSubsRef, markDirty, onDataUpdate = null) {
   const { showToast } = useToastStore();
   const subscriptions = ref([]);
   const subsCurrentPage = ref(1);
@@ -46,7 +46,10 @@ export function useSubscriptions(initialSubsRef, markDirty) {
                   const sub = subscriptions.value.find(s => s.id === updateResult.id);
                   if (sub) {
                     sub.nodeCount = updateResult.nodeCount;
-                    // userInfo会在下次数据同步时更新
+                    // 立即更新userInfo，而不是等待下次数据同步
+                    if (updateResult.userInfo) {
+                      sub.userInfo = updateResult.userInfo;
+                    }
                   }
                 }
               });
@@ -54,6 +57,8 @@ export function useSubscriptions(initialSubsRef, markDirty) {
               const successCount = result.results.filter(r => r.success).length;
               showToast(`自动更新完成！成功更新 ${successCount}/${enabledSubs.length} 个订阅`, 'success');
               markDirty();
+              // 触发数据刷新回调
+              if (onDataUpdate) onDataUpdate();
             } else {
               console.error('Auto update failed:', result.message);
             }
@@ -84,7 +89,10 @@ export function useSubscriptions(initialSubsRef, markDirty) {
                   const subToUpdate = subscriptions.value.find(s => s.id === updateResult.id);
                   if (subToUpdate) {
                     subToUpdate.nodeCount = updateResult.nodeCount;
-                    // userInfo会在下次数据同步时更新
+                    // 立即更新userInfo，而不是等待下次数据同步
+                    if (updateResult.userInfo) {
+                      subToUpdate.userInfo = updateResult.userInfo;
+                    }
                   }
                 }
               });
@@ -92,6 +100,8 @@ export function useSubscriptions(initialSubsRef, markDirty) {
               const successCount = result.results.filter(r => r.success).length;
               showToast(`订阅 ${sub.name || ''} 自动更新完成！`, 'success');
               markDirty();
+              // 触发数据刷新回调
+              if (onDataUpdate) onDataUpdate();
             } else {
               console.error(`Individual auto update failed for ${sub.name}:`, result.message);
             }

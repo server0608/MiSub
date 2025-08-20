@@ -230,6 +230,7 @@ async function handleCronTrigger(env) {
     const settings = await storageAdapter.get(KV_KEY_SETTINGS) || defaultSettings;
 
     const nodeRegex = /^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5):\/\//gm;
+let changesMade = false;
 
     for (const sub of allSubs) {
         if (sub.url.startsWith('http') && sub.enabled) {
@@ -753,7 +754,7 @@ async function handleApiRequest(request, env) {
                             const matches = decoded.match(nodeRegex);
                             sub.nodeCount = matches ? matches.length : 0;
 
-                            return { id: sub.id, success: true, nodeCount: sub.nodeCount };
+                            return { id: sub.id, success: true, nodeCount: sub.nodeCount, userInfo: sub.userInfo };
                         } else {
                             return { id: sub.id, success: false, error: `HTTP ${response.status}` };
                         }

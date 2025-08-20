@@ -1,3 +1,4 @@
+import { ref } from 'vue';
 <script setup>
 import { ref, computed, onMounted, onUnmounted, defineAsyncComponent, watch } from 'vue';
 import { saveMisubs, fetchSettings } from '../lib/api.js';
@@ -27,6 +28,8 @@ const uiStore = useUIStore();
 const isLoading = ref(true);
 const dirty = ref(false);
 const saveState = ref('idle');
+const autoUpdateState = ref('idle'); // 'idle', 'updating', 'success', 'error'
+const lastUpdateTime = ref(null);
 
 // --- 將狀態和邏輯委託給 Composables ---
 const markDirty = () => { dirty.value = true; saveState.value = 'idle'; };
@@ -38,7 +41,7 @@ const {
   changeSubsPage, addSubscription, updateSubscription, deleteSubscription, deleteAllSubscriptions,
   addSubscriptionsFromBulk, handleUpdateNodeCount, updateInterval, handleUpdateIntervalChange,
   handleSubscriptionUpdateIntervalChange,
-} = useSubscriptions(initialSubs, markDirty);
+} = useSubscriptions(initialSubs, markDirty, refreshData);
 
 const {
   manualNodes, manualNodesCurrentPage, manualNodesTotalPages, paginatedManualNodes, searchTerm,
@@ -97,6 +100,70 @@ watch(() => uiStore.isSettingsModalVisible, (newValue, oldValue) => {
     }).catch(error => {
       console.error('Failed to fetch settings after modal close:', error);
     });
+  }
+});
+
+// 添加数据自动刷新机制
+const refreshData = async () => {
+  autoUpdateState.value = 'updating';
+  try {
+    const response = await fetch('/api/data');
+    if (response.ok) {
+      const data = await response.json();
+      // 更新订阅数据
+      if (data.misubs) {
+        const subsData = data.misubs || [];
+        initialSubs.value = subsData.filter(item => item.url && /^https?:\/\/.*/.test(item.url));
+        initialNodes.value = subsData.filter(item => !item.url || !/^https?:\/\/.*/.test(item.url));
+      }
+      // 更新配置文件数据
+      if (data.profiles) {
+        initialProfiles.value = data.profiles || [];
+        initializeProfiles();
+      }
+      // 更新配置
+      if (data.config) {
+        config.value = data.config || {};
+      }
+      autoUpdateState.value = 'success';
+      lastUpdateTime.value = new Date();
+      setTimeout(() => {
+        autoUpdateState.value = 'idle';
+      }, 3000); // 3秒后隐藏成功状态
+    } else {
+      autoUpdateState.value = 'error';
+      setTimeout(() => {
+        autoUpdateState.value = 'idle';
+      }, 5000); // 5秒后隐藏错误状态
+    }
+  } catch (error) {
+    console.error('Failed to refresh data:', error);
+    autoUpdateState.value = 'error';
+    setTimeout(() => {
+      autoUpdateState.value = 'idle';
+    }, 5000);
+  }
+};
+
+// 设置定时器，每5分钟刷新一次数据
+let dataRefreshTimer;
+onMounted(() => {
+  initializeState();
+  window.addEventListener('beforeunload', handleBeforeUnload);
+  const savedViewMode = localStorage.getItem('manualNodeViewMode');
+  if (savedViewMode) {
+    manualNodeViewMode.value = savedViewMode;
+  }
+  
+  // 启动数据自动刷新
+  dataRefreshTimer = setInterval(refreshData, 5 * 60 * 1000); // 5分钟刷新一次
+});
+
+onUnmounted(() => {
+  window.removeEventListener('beforeunload', handleBeforeUnload);
+  // 清理定时器
+  if (dataRefreshTimer) {
+    clearInterval(dataRefreshTimer);
   }
 });
 
@@ -290,12 +357,38 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
     <div class="flex justify-between items-center mb-8">
       <div class="flex items-center gap-4">
         <h1 class="text-2xl font-bold text-gray-800 dark:text-white">仪表盘</h1>
-        <span 
+        <span
           v-if="formattedTotalRemainingTraffic !== '0 B'"
           class="px-3 py-1 text-sm font-semibold text-green-700 bg-green-100 dark:text-green-300 dark:bg-green-500/20 rounded-full"
         >
           剩余总流量: {{ formattedTotalRemainingTraffic }}
         </span>
+        <!-- 自动更新状态指示器 -->
+        <div v-if="autoUpdateState !== 'idle'" class="flex items-center gap-2">
+          <div v-if="autoUpdateState === 'updating'" class="flex items-center gap-2 px-3 py-1 text-sm text-blue-600 bg-blue-100 dark:text-blue-400 dark:bg-blue-500/20 rounded-full">
+            <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+            </svg>
+            自动更新中...
+          </div>
+          <div v-else-if="autoUpdateState === 'success'" class="flex items-center gap-2 px-3 py-1 text-sm text-green-600 bg-green-100 dark:text-green-400 dark:bg-green-500/20 rounded-full">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            数据已更新
+          </div>
+          <div v-else-if="autoUpdateState === 'error'" class="flex items-center gap-2 px-3 py-1 text-sm text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-500/20 rounded-full">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+            更新失败
+          </div>
+        </div>
+        <!-- 最后更新时间 -->
+        <div v-if="lastUpdateTime" class="text-xs text-gray-500 dark:text-gray-400">
+          最后更新: {{ lastUpdateTime.toLocaleTimeString() }}
+        </div>
       </div>
       <div class="flex items-center gap-2">
         <button @click="showBulkImportModal = true" class="text-sm font-semibold px-4 py-2 rounded-lg text-indigo-600 dark:text-indigo-400 border-2 border-indigo-500/50 hover:bg-indigo-500/10 transition-colors">批量导入</button>
@@ -416,11 +509,11 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
             id="sub-edit-update-interval"
             v-model="editingSubscription.updateInterval"
             min="5"
-            max="1440"
+            max="1444"
             placeholder="留空则使用全局设置"
             class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white"
           >
-          <p class="text-xs text-gray-400 mt-1">设置此订阅的单独更新时间间隔，范围为5-1440分钟（24小时）。留空则使用全局设置。</p>
+          <p class="text-xs text-gray-400 mt-1">设置此订阅的单独更新时间间隔，范围为5-1444分钟（约24小时）。留空则使用全局设置。</p>
         </div>
         <div>
           <label for="sub-edit-exclude" class="block text-sm font-medium text-gray-700 dark:text-gray-300">包含/排除节点</label>
