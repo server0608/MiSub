@@ -1,4 +1,3 @@
-import { ref } from 'vue';
 <script setup>
 import { ref, computed, onMounted, onUnmounted, defineAsyncComponent, watch } from 'vue';
 import { saveMisubs, fetchSettings } from '../lib/api.js';
@@ -35,6 +34,48 @@ const lastUpdateTime = ref(null);
 const markDirty = () => { dirty.value = true; saveState.value = 'idle'; };
 const initialSubs = ref([]);
 const initialNodes = ref([]);
+
+// 添加数据自动刷新机制
+const refreshData = async () => {
+  autoUpdateState.value = 'updating';
+  try {
+    const response = await fetch('/api/data');
+    if (response.ok) {
+      const data = await response.json();
+      // 更新订阅数据
+      if (data.misubs) {
+        const subsData = data.misubs || [];
+        initialSubs.value = subsData.filter(item => item.url && /^https?:\/\/.*/.test(item.url));
+        initialNodes.value = subsData.filter(item => !item.url || !/^https?:\/\/.*/.test(item.url));
+      }
+      // 更新配置文件数据
+      if (data.profiles) {
+        initialProfiles.value = data.profiles || [];
+        initializeProfiles();
+      }
+      // 更新配置
+      if (data.config) {
+        config.value = data.config || {};
+      }
+      autoUpdateState.value = 'success';
+      lastUpdateTime.value = new Date();
+      setTimeout(() => {
+        autoUpdateState.value = 'idle';
+      }, 3000); // 3秒后隐藏成功状态
+    } else {
+      autoUpdateState.value = 'error';
+      setTimeout(() => {
+        autoUpdateState.value = 'idle';
+      }, 5000); // 5秒后隐藏错误状态
+    }
+  } catch (error) {
+    console.error('Failed to refresh data:', error);
+    autoUpdateState.value = 'error';
+    setTimeout(() => {
+      autoUpdateState.value = 'idle';
+    }, 5000);
+  }
+};
 
 const {
   subscriptions, subsCurrentPage, subsTotalPages, paginatedSubscriptions, totalRemainingTraffic,
@@ -103,47 +144,6 @@ watch(() => uiStore.isSettingsModalVisible, (newValue, oldValue) => {
   }
 });
 
-// 添加数据自动刷新机制
-const refreshData = async () => {
-  autoUpdateState.value = 'updating';
-  try {
-    const response = await fetch('/api/data');
-    if (response.ok) {
-      const data = await response.json();
-      // 更新订阅数据
-      if (data.misubs) {
-        const subsData = data.misubs || [];
-        initialSubs.value = subsData.filter(item => item.url && /^https?:\/\/.*/.test(item.url));
-        initialNodes.value = subsData.filter(item => !item.url || !/^https?:\/\/.*/.test(item.url));
-      }
-      // 更新配置文件数据
-      if (data.profiles) {
-        initialProfiles.value = data.profiles || [];
-        initializeProfiles();
-      }
-      // 更新配置
-      if (data.config) {
-        config.value = data.config || {};
-      }
-      autoUpdateState.value = 'success';
-      lastUpdateTime.value = new Date();
-      setTimeout(() => {
-        autoUpdateState.value = 'idle';
-      }, 3000); // 3秒后隐藏成功状态
-    } else {
-      autoUpdateState.value = 'error';
-      setTimeout(() => {
-        autoUpdateState.value = 'idle';
-      }, 5000); // 5秒后隐藏错误状态
-    }
-  } catch (error) {
-    console.error('Failed to refresh data:', error);
-    autoUpdateState.value = 'error';
-    setTimeout(() => {
-      autoUpdateState.value = 'idle';
-    }, 5000);
-  }
-};
 
 // 设置定时器，每5分钟刷新一次数据
 let dataRefreshTimer;
@@ -174,18 +174,6 @@ const handleBeforeUnload = (event) => {
   }
 };
 
-onMounted(() => {
-  initializeState();
-  window.addEventListener('beforeunload', handleBeforeUnload);
-  const savedViewMode = localStorage.getItem('manualNodeViewMode');
-  if (savedViewMode) {
-    manualNodeViewMode.value = savedViewMode;
-  }
-});
-
-onUnmounted(() => {
-  window.removeEventListener('beforeunload', handleBeforeUnload);
-});
 
 const setViewMode = (mode) => {
   manualNodeViewMode.value = mode;
