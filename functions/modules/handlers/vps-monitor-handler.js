@@ -188,6 +188,36 @@ function resolveSettings(config) {
     return { ...DEFAULT_SETTINGS, ...(config || {}) };
 }
 
+function resolvePublicThemePreset(settings) {
+    const preset = normalizeString(settings?.vpsMonitor?.publicThemePreset).toLowerCase();
+    const supported = new Set(['default', 'komari', 'minimal', 'tech-dark', 'glass']);
+    return supported.has(preset) ? preset : 'default';
+}
+
+function buildPublicThemeConfig(settings) {
+    const raw = settings?.vpsMonitor || {};
+    const validSections = new Set(['anomalies', 'nodes', 'featured', 'details']);
+    const normalizedOrder = Array.isArray(raw.publicThemeSectionOrder)
+        ? raw.publicThemeSectionOrder.filter(item => validSections.has(normalizeString(item)))
+        : [];
+    const sectionOrder = normalizedOrder.length
+        ? normalizedOrder
+        : DEFAULT_SETTINGS.vpsMonitor.publicThemeSectionOrder;
+    return {
+        preset: resolvePublicThemePreset(settings),
+        title: normalizeString(raw.publicThemeTitle) || DEFAULT_SETTINGS.vpsMonitor.publicThemeTitle,
+        subtitle: normalizeString(raw.publicThemeSubtitle) || DEFAULT_SETTINGS.vpsMonitor.publicThemeSubtitle,
+        logo: normalizeString(raw.publicThemeLogo),
+        backgroundImage: normalizeString(raw.publicThemeBackgroundImage),
+        showStats: raw.publicThemeShowStats !== false,
+        showAnomalies: raw.publicThemeShowAnomalies !== false,
+        showFeatured: raw.publicThemeShowFeatured !== false,
+        showDetailTable: raw.publicThemeShowDetailTable !== false,
+        sectionOrder,
+        customCss: normalizeString(raw.publicThemeCustomCss)
+    };
+}
+
 async function loadVpsSettings(env) {
     await StorageFactory.ensureD1Settings(env);
     const storageAdapter = await getStorageAdapter(env);
@@ -1419,6 +1449,9 @@ export async function handleVpsPublicSnapshotRequest(request, env) {
 
     const db = getD1(env);
     const nodes = await fetchNodes(db);
+    if (!nodes.length) {
+        return createJsonResponse({ success: true, data: [], theme: buildPublicThemeConfig(settings) });
+    }
     
     // Fetch latest network samples for all nodes to ensure they are visible
     const nodeIds = nodes.map(n => n.id);
@@ -1460,7 +1493,7 @@ export async function handleVpsPublicSnapshotRequest(request, env) {
         return summary;
     });
 
-    return createJsonResponse({ success: true, data });
+    return createJsonResponse({ success: true, data, theme: buildPublicThemeConfig(settings) });
 }
 
 async function fetchLatestNetworkSamplesBatch(db, nodeIds) {
@@ -1480,6 +1513,68 @@ async function fetchLatestNetworkSamplesBatch(db, nodeIds) {
         }
     }
     return Array.from(latestMap.values());
+}
+
+export async function handleVpsPublicNodeDetailRequest(request, env) {
+    const d1Check = ensureD1Available(env);
+    if (d1Check) return d1Check;
+    const settings = await loadVpsSettings(env);
+    const storageModeCheck = ensureD1StorageMode(settings, env);
+    if (storageModeCheck) return storageModeCheck;
+
+    if (settings?.vpsMonitor?.publicPageEnabled !== true) {
+        return createErrorResponse('Public access disabled', 403);
+    }
+
+    const token = normalizeString(settings?.vpsMonitor?.publicPageToken);
+    if (token) {
+        const provided = normalizeString(new URL(request.url).searchParams.get('token'));
+        if (!provided || provided !== token) {
+            return createErrorResponse('Unauthorized', 401);
+        }
+    }
+
+    const url = new URL(request.url);
+    const nodeId = normalizeString(url.pathname.split('/').pop());
+    if (!nodeId || nodeId === 'nodes') {
+        const id = url.searchParams.get('id');
+        if (!id) return createErrorResponse('Node id required', 400);
+    }
+
+    const db = getD1(env);
+    const node = await fetchNode(db, nodeId);
+    if (!node) {
+        return createErrorResponse('Node not found', 404);
+    }
+
+    const nodeTargets = await fetchNetworkTargets(db, nodeId);
+    const globalTargets = node?.useGlobalTargets ? await fetchGlobalNetworkTargets(db) : [];
+    const targets = node?.useGlobalTargets ? globalTargets : nodeTargets;
+
+    // Fetch network samples - last 500 points for better precision
+    const cutoff = new Date(getReportRetentionCutoff(settings)).toISOString();
+    const result = await db.prepare(
+        'SELECT data FROM vps_network_samples WHERE node_id = ? AND reported_at >= ? ORDER BY reported_at ASC LIMIT 500'
+    ).bind(nodeId, cutoff).all();
+    
+    const samples = (result.results || []).map(row => {
+        const s = JSON.parse(row.data);
+        if (s.checks) s.checks = rehydrateCheckNames(s.checks, targets);
+        return s;
+    });
+
+    const summary = summarizeNode(node, node.lastReport || null, settings);
+    // Security: Remove sensitive IP information
+    if (summary.latest) {
+        if (summary.latest.publicIp) delete summary.latest.publicIp;
+        if (summary.latest.ip) delete summary.latest.ip;
+    }
+
+    return createJsonResponse({
+        success: true,
+        data: summary,
+        networkSamples: samples
+    });
 }
 
 export async function handleVpsNodeDetailRequest(request, env) {
@@ -1694,7 +1789,7 @@ export async function handleVpsNetworkCheck(request, env) {
         return createErrorResponse('Target id required', 400);
     }
 
-    const targetRow = await db.prepare('SELECT * FROM vps_network_targets WHERE id = ? AND node_id = ?').bind(targetId, nodeId).first();
+    const targetRow = await db.prepare('SELECT * FROM vps_network_targets WHERE id = ? AND (node_id = ? OR node_id = ?)').bind(targetId, nodeId, 'global').first();
     if (!targetRow) {
         return createErrorResponse('Target not found', 404);
     }

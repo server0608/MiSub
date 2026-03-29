@@ -224,8 +224,8 @@ export async function onRequest(context) {
                 const isSpaRoute = [
                     '/groups',
                     '/nodes',
+                    '/monitor',
                     '/vps',
-                    '/vps/public',
                     '/subscriptions',
                     '/settings',
                     '/login', // 默认 login 仍然需要保留，以便前端处理 "入口" 逻辑
@@ -240,7 +240,7 @@ export async function onRequest(context) {
                     && url.pathname !== '/login'
                     && url.pathname !== customLoginPath
                     && !url.pathname.startsWith('/explore')
-                    && !url.pathname.startsWith('/vps/public')
+                    && !url.pathname.startsWith('/vps')
                     && url.pathname !== '/offline';
 
                 // Route protection for SPA pages
@@ -265,7 +265,7 @@ export async function onRequest(context) {
                 // [Smart Disguise] Check if we need to disguise the SPA/Root
                 // Only applies to non-static assets
                 if ((url.pathname === '/' || isSpaRoute) && !isStaticAsset) {
-                    if (url.pathname.startsWith('/vps/public')) {
+                    if (url.pathname === '/vps') {
                         // public page should never be disguised
                         const indexResponse = await fetchSpaEntry(request, env, next);
                         return applyNoStoreToHtmlResponse(indexResponse);

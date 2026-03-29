@@ -256,20 +256,45 @@ export async function handleSettingsSave(request, env) {
     try {
         const newSettings = await request.json();
 
-        // 校验 customLoginPath 是否为系统保留路径
-        if (newSettings.customLoginPath) {
-        const reservedPaths = [
+        const reservedPathRoots = new Set([
             'settings', 'login', 'groups', 'nodes', 'subscriptions', 'dashboard',
             'api', 'explore', 'sub', 'cron', 'assets', '@vite', 'public', 'profile', 'offline',
-            'vps'
-        ];
-            const pathSegment = newSettings.customLoginPath.replace(/^\/+/, '').split('/')[0].toLowerCase();
-            if (reservedPaths.includes(pathSegment)) {
+            'vps', 'monitor', 'logout', 'auth_debug', 'auth_check', 'data', 'kv_test',
+            'clients', 'system', 'github', 'telegram', 'test_notification', 'test_subconverter',
+            'misubs', 'node_count', 'nodes', 'fetch_external_url', 'batch_update_nodes',
+            'subscription_nodes', 'debug_subscription', 'preview'
+        ]);
+
+        const normalizePathRoot = (value) => {
+            if (typeof value !== 'string') return '';
+            return value.trim().replace(/^\/+/, '').split('/')[0].toLowerCase();
+        };
+
+        const rejectReservedValue = (value, fieldLabel) => {
+            const pathRoot = normalizePathRoot(value);
+            if (pathRoot && reservedPathRoots.has(pathRoot)) {
                 return createJsonResponse({
                     success: false,
-                    message: `"/${pathSegment}" 是系统保留路径，不可用作自定义登录路径`
+                    message: `"/${pathRoot}" 是系统保留路径，不可用作${fieldLabel}`
                 }, 400);
             }
+            return null;
+        };
+
+        // 校验 customLoginPath 是否为系统保留路径
+        if (newSettings.customLoginPath) {
+            const rejected = rejectReservedValue(newSettings.customLoginPath, '自定义登录路径');
+            if (rejected) return rejected;
+        }
+
+        // 订阅 Token 也不能使用会和路由冲突的保留路径
+        if (newSettings.mytoken && newSettings.mytoken !== 'auto') {
+            const rejected = rejectReservedValue(newSettings.mytoken, '自定义订阅Token');
+            if (rejected) return rejected;
+        }
+        if (newSettings.profileToken && newSettings.profileToken !== 'profiles') {
+            const rejected = rejectReservedValue(newSettings.profileToken, '订阅组分享Token');
+            if (rejected) return rejected;
         }
 
         const storageAdapter = await getStorageAdapter(env);

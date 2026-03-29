@@ -47,13 +47,13 @@ const routes = [
         meta: { title: '我的订阅' }
     },
     {
-        path: '/vps',
+        path: '/monitor',
         name: 'VpsMonitor',
         component: VpsMonitorView,
         meta: { title: 'VPS探针' }
     },
     {
-        path: '/vps/public',
+        path: '/vps',
         name: 'PublicVpsMonitor',
         component: PublicVpsMonitorView,
         meta: { title: 'VPS探针公开页', isPublic: true }

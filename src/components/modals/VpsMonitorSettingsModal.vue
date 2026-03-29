@@ -3,7 +3,8 @@ import Modal from '../forms/Modal.vue';
 import { computed, ref, watch } from 'vue';
 import VpsMonitorCard from '../settings/sections/ServiceSettings/VpsMonitorCard.vue';
 import VpsNetworkTargets from '../vps/VpsNetworkTargets.vue';
-import { fetchVpsGlobalNetworkTargets, createVpsGlobalNetworkTarget } from '../../lib/api.js';
+import { fetchVpsGlobalNetworkTargets } from '../../lib/api.js';
+import { useToastStore } from '../../stores/toast.js';
 
 const props = defineProps({
   show: {
@@ -21,27 +22,27 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['update:show', 'save']);
+const { showToast } = useToastStore();
 
 const globalTargets = ref([]);
 const isLoadingTargets = ref(false);
+const targetsError = ref('');
 
 const canEditTargets = computed(() => props.settings?.vpsMonitor?.enabled !== false);
 
 const loadGlobalTargets = async () => {
   if (!props.show) return;
   isLoadingTargets.value = true;
+  targetsError.value = '';
   const result = await fetchVpsGlobalNetworkTargets();
   if (result.success) {
     globalTargets.value = result.data?.data || [];
+  } else {
+    globalTargets.value = [];
+    targetsError.value = result.error || '加载全局监测目标失败';
+    showToast(targetsError.value, 'error');
   }
   isLoadingTargets.value = false;
-};
-
-const handleGlobalTargetSave = async (payload) => {
-  const result = await createVpsGlobalNetworkTarget(payload);
-  if (result.success) {
-    globalTargets.value = [result.data?.data, ...globalTargets.value].filter(Boolean);
-  }
 };
 
 watch(() => props.show, (val) => {
@@ -77,13 +78,21 @@ const handleSave = () => {
             <span class="text-xs text-gray-400" v-if="isLoadingTargets">加载中...</span>
           </div>
           <div class="mt-4">
+            <div v-if="targetsError" aria-live="assertive" class="mb-3 flex items-center justify-between gap-3 rounded-lg border border-rose-200/70 bg-rose-50/80 px-3 py-2 text-xs text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300">
+              <span>{{ targetsError }}</span>
+              <button type="button" class="rounded-md border border-rose-300/70 px-2 py-1 transition-colors hover:bg-rose-100 dark:border-rose-500/30 dark:hover:bg-rose-500/10" @click="loadGlobalTargets">重试</button>
+            </div>
             <VpsNetworkTargets
               v-if="canEditTargets"
               node-id="global"
               :targets="globalTargets"
+              :allow-check="false"
               :limit="settings?.vpsMonitor?.networkTargetsLimit || 3"
               @refresh="loadGlobalTargets"
             />
+            <div v-else class="rounded-lg border border-dashed border-amber-300/70 bg-amber-50/70 px-4 py-3 text-xs text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300">
+              当前已禁用 VPS 探针。请先开启探针功能，再管理全局网络监测目标。
+            </div>
           </div>
         </div>
       </div>

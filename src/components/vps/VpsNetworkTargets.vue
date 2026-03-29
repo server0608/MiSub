@@ -16,6 +16,10 @@ const props = defineProps({
     type: Object,
     default: () => ({})
   },
+  allowCheck: {
+    type: Boolean,
+    default: true
+  },
   limit: {
     type: Number,
     default: 3
@@ -38,6 +42,15 @@ const sortKey = ref('type');
 const sortDir = ref('asc');
 const filterType = ref('all');
 const filterQuery = ref('');
+const isCreating = ref(false);
+const pendingTargetIds = ref({});
+
+const setPending = (targetId, pending) => {
+  pendingTargetIds.value = {
+    ...pendingTargetIds.value,
+    [targetId]: pending
+  };
+};
 
 const canAddMore = computed(() => props.targets.length < props.limit);
 
@@ -46,7 +59,7 @@ const filteredTargets = computed(() => {
   return props.targets.filter((item) => {
     if (filterType.value !== 'all' && item.type !== filterType.value) return false;
     if (!keyword) return true;
-    const text = `${item.type} ${item.target} ${item.path || ''} ${item.port || ''}`.toLowerCase();
+    const text = `${item.name || ''} ${item.type} ${item.target} ${item.path || ''} ${item.port || ''}`.toLowerCase();
     return text.includes(keyword);
   });
 });
@@ -73,6 +86,7 @@ const resetForm = () => {
 };
 
 const handleCreate = async () => {
+  if (isCreating.value) return;
   if (!formState.value.target.trim()) {
     showToast('请输入目标地址', 'warning');
     return;
@@ -85,40 +99,60 @@ const handleCreate = async () => {
     path: formState.value.type === 'http' ? formState.value.path || '/' : undefined,
     scheme: formState.value.type === 'http' ? formState.value.scheme || 'https' : undefined
   };
-  const result = await createVpsNetworkTarget(props.nodeId, payload);
-  if (result.success) {
-    showToast('目标已添加', 'success');
-    resetForm();
-    emit('refresh');
-  } else {
-    showToast(result.error || '添加失败', 'error');
+  isCreating.value = true;
+  try {
+    const result = await createVpsNetworkTarget(props.nodeId, payload);
+    if (result.success) {
+      showToast('目标已添加', 'success');
+      resetForm();
+      emit('refresh');
+    } else {
+      showToast(result.error || '添加失败', 'error');
+    }
+  } finally {
+    isCreating.value = false;
   }
 };
 
 const handleToggle = async (target) => {
-  const result = await updateVpsNetworkTarget(props.nodeId, { id: target.id, enabled: !target.enabled });
-  if (result.success) {
-    emit('refresh');
-  } else {
-    showToast(result.error || '更新失败', 'error');
+  if (pendingTargetIds.value[target.id]) return;
+  setPending(target.id, true);
+  try {
+    const result = await updateVpsNetworkTarget(props.nodeId, { id: target.id, enabled: !target.enabled });
+    if (result.success) {
+      emit('refresh');
+    } else {
+      showToast(result.error || '更新失败', 'error');
+    }
+  } finally {
+    setPending(target.id, false);
   }
 };
 
 const handleDelete = async (target) => {
-  const result = await deleteVpsNetworkTarget(props.nodeId, target.id);
-  if (result.success) {
-    showToast('目标已删除', 'success');
-    emit('refresh');
-  } else {
-    showToast(result.error || '删除失败', 'error');
+  if (pendingTargetIds.value[target.id]) return;
+  setPending(target.id, true);
+  try {
+    const result = await deleteVpsNetworkTarget(props.nodeId, target.id);
+    if (result.success) {
+      showToast('目标已删除', 'success');
+      emit('refresh');
+    } else {
+      showToast(result.error || '删除失败', 'error');
+    }
+  } finally {
+    setPending(target.id, false);
   }
 };
 
 const handleCheck = (target) => {
+  if (!props.allowCheck) return;
   emit('check', target);
 };
 
 const isChecking = (target) => Boolean(props.checkingTargets?.[target.id]);
+const isPending = (target) => Boolean(pendingTargetIds.value?.[target.id]);
+const supportsCheck = computed(() => props.allowCheck);
 </script>
 
 <template>
@@ -146,7 +180,7 @@ const isChecking = (target) => Boolean(props.checkingTargets?.[target.id]);
       </select>
       <button
         type="button"
-        class="px-2.5 py-1.5 border border-gray-200 dark:border-white/10 rounded-lg"
+        class="px-2.5 py-1.5 border border-gray-200 dark:border-white/10 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
         @click="sortDir = sortDir === 'asc' ? 'desc' : 'asc'"
       >
         {{ sortDir === 'asc' ? '升序' : '降序' }}
@@ -157,9 +191,9 @@ const isChecking = (target) => Boolean(props.checkingTargets?.[target.id]);
       <div
         v-for="item in sortedTargets"
         :key="item.id"
-        class="flex items-center justify-between gap-3 p-3 rounded-lg border border-gray-200/70 dark:border-white/10 bg-white/70 dark:bg-gray-900/60"
+        class="flex flex-col gap-3 rounded-lg border border-gray-200/70 bg-white/70 p-3 dark:border-white/10 dark:bg-gray-900/60 sm:flex-row sm:items-center sm:justify-between"
       >
-        <div>
+        <div class="min-w-0">
           <div class="text-sm font-medium text-gray-900 dark:text-white">
             <span v-if="item.name" class="mr-1.5 px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-bold">{{ item.name }}</span>
             <span class="opacity-60 text-xs font-normal mr-1">[{{ item.type.toUpperCase() }}]</span>
@@ -169,25 +203,28 @@ const isChecking = (target) => Boolean(props.checkingTargets?.[target.id]);
           </div>
           <div class="text-[10px] text-gray-400 mt-0.5">{{ item.enabled ? '已启用监控' : '已停用' }}</div>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2 sm:justify-end">
           <button
-            class="px-2.5 py-1.5 text-xs border border-gray-200 dark:border-white/10 rounded-lg"
+            v-if="supportsCheck"
+            class="px-2.5 py-1.5 text-xs border border-gray-200 dark:border-white/10 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
             @click="handleCheck(item)"
-            :disabled="isChecking(item)"
+            :disabled="isChecking(item) || isPending(item)"
           >
             {{ isChecking(item) ? '检测中...' : '立即检测' }}
           </button>
           <button
-            class="px-2.5 py-1.5 text-xs border border-gray-200 dark:border-white/10 rounded-lg"
+            class="px-2.5 py-1.5 text-xs border border-gray-200 dark:border-white/10 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
             @click="handleToggle(item)"
+            :disabled="isPending(item) || isChecking(item)"
           >
-            {{ item.enabled ? '停用' : '启用' }}
+            {{ isPending(item) ? '处理中...' : (item.enabled ? '停用' : '启用') }}
           </button>
           <button
-            class="px-2.5 py-1.5 text-xs text-rose-600 dark:text-rose-300 border border-rose-200/60 dark:border-rose-500/20 rounded-lg"
+            class="px-2.5 py-1.5 text-xs text-rose-600 dark:text-rose-300 border border-rose-200/60 dark:border-rose-500/20 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/60"
             @click="handleDelete(item)"
+            :disabled="isPending(item) || isChecking(item)"
           >
-            删除
+            {{ isPending(item) ? '处理中...' : '删除' }}
           </button>
         </div>
       </div>
@@ -211,10 +248,12 @@ const isChecking = (target) => Boolean(props.checkingTargets?.[target.id]);
           <input v-model="formState.path" placeholder="路径" class="px-3 py-2 text-xs bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg" />
         </div>
         <button
-          class="px-3 py-2 text-xs text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg font-medium"
+          type="button"
+          class="px-3 py-2 text-xs text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
           @click="handleCreate"
+          :disabled="isCreating"
         >
-          添加目标
+          {{ isCreating ? '添加中...' : '添加目标' }}
         </button>
       </div>
     </div>

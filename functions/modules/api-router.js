@@ -45,7 +45,8 @@ import {
     handleVpsInstallScript,
     handleVpsNetworkTargetsRequest,
     handleVpsNetworkCheck,
-    handleVpsConfig
+    handleVpsConfig,
+    handleVpsPublicNodeDetailRequest
 } from './handlers/vps-monitor-handler.js';
 
 // 常量定义
@@ -184,6 +185,10 @@ export async function handleApiRequest(request, env) {
     if (path === '/vps/public') {
         const { handleVpsPublicSnapshotRequest } = await import('./handlers/vps-monitor-handler.js');
         return await handleVpsPublicSnapshotRequest(request, env);
+    }
+    
+    if (path.startsWith('/vps/public/nodes/')) {
+        return await handleVpsPublicNodeDetailRequest(request, env);
     }
 
     // Public GET access for clients

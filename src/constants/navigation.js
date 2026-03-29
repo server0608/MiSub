@@ -16,6 +16,6 @@ export const MAIN_NAV_ITEMS = [
   { name: '机场订阅', path: '/groups', iconPath: NAV_ICONS.groups },
   { name: '手工节点', path: '/nodes', iconPath: NAV_ICONS.nodes },
   { name: '我的订阅', path: '/subscriptions', iconPath: NAV_ICONS.subscriptions },
-  { name: 'VPS探针', path: '/vps', iconPath: NAV_ICONS.vps },
+  { name: 'VPS探针', path: '/monitor', iconPath: NAV_ICONS.vps },
   { name: '设置', path: '/settings', iconPath: NAV_ICONS.settings }
 ];
