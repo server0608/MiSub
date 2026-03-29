@@ -3,7 +3,7 @@
  * 处理各种API请求
  */
 
-import { StorageFactory, SettingsCache } from '../storage-adapter.js';
+import { StorageFactory, SettingsCache, STORAGE_TYPES } from '../storage-adapter.js';
 import { getCookieSecret, getAdminPassword, setAdminPassword, isUsingDefaultPassword, createJsonResponse, createErrorResponse, migrateProfileIds } from './utils.js';
 import { authMiddleware, handleLogin, handleLogout, createUnauthorizedResponse } from './auth-middleware.js';
 import { sendTgNotification, checkAndNotify } from './notifications.js';
@@ -57,10 +57,8 @@ export async function handleDataRequest(env) {
             );
         }
         const config = {
-            FileName: settings.FileName || 'MISUB',
-            mytoken: settings.mytoken || 'auto',
-
-            profileToken: settings.profileToken || 'profiles',
+            ...defaultSettings,
+            ...settings,
             isDefaultPassword: await isUsingDefaultPassword(env)
         };
         return createJsonResponse({ misubs, profiles, config });
@@ -262,7 +260,8 @@ export async function handleSettingsSave(request, env) {
         if (newSettings.customLoginPath) {
         const reservedPaths = [
             'settings', 'login', 'groups', 'nodes', 'subscriptions', 'dashboard',
-            'api', 'explore', 'sub', 'cron', 'assets', '@vite', 'public', 'profile', 'offline'
+            'api', 'explore', 'sub', 'cron', 'assets', '@vite', 'public', 'profile', 'offline',
+            'vps'
         ];
             const pathSegment = newSettings.customLoginPath.replace(/^\/+/, '').split('/')[0].toLowerCase();
             if (reservedPaths.includes(pathSegment)) {
@@ -289,6 +288,20 @@ export async function handleSettingsSave(request, env) {
             }
             throw storageError;
         }
+
+        // 双存储同步：尽量保持 KV / D1 一致
+        try {
+            const d1Adapter = StorageFactory.createAdapter(env, STORAGE_TYPES.D1);
+            await d1Adapter.put(KV_KEY_SETTINGS, finalSettings);
+        } catch (syncError) {
+            console.warn('[API] Failed to sync settings to D1:', syncError?.message || syncError);
+        }
+        try {
+            const kvAdapter = StorageFactory.createAdapter(env, STORAGE_TYPES.KV);
+            await kvAdapter.put(KV_KEY_SETTINGS, finalSettings);
+        } catch (syncError) {
+            console.warn('[API] Failed to sync settings to KV:', syncError?.message || syncError);
+        }
         SettingsCache.clear();
 
         // 清除节点缓存（设置变更可能影响节点处理逻辑）
@@ -301,7 +314,7 @@ export async function handleSettingsSave(request, env) {
         const message = `⚙️ *MiSub 设置更新* ⚙️\n\n您的 MiSub 应用设置已成功更新。`;
         await sendTgNotification(finalSettings, message);
 
-        return createJsonResponse({ success: true, message: '设置已保存' });
+        return createJsonResponse({ success: true, message: '设置已保存', data: finalSettings });
     } catch (e) {
         return createErrorResponse('保存设置失败', 500);
     }
