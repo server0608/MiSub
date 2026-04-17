@@ -9,7 +9,7 @@ import { resolveRequestContext } from './request-context.js';
 import { resolveNodeListWithCache } from './cache-manager.js';
 import { ProcessorService } from '../../services/processor-service.js';
 import { logAccessSuccess, shouldSkipLogging as shouldSkipAccessLog } from './access-logger.js';
-import { isBrowserAgent, determineTargetFormat } from './user-agent-utils.js'; // [Added] Import centralized util
+import { isBrowserAgent, determineTargetFormat, isMetaCore } from './user-agent-utils.js'; // [Added] Import centralized util
 import { authMiddleware } from '../auth-middleware.js';
 import { transformBuiltinSubscription } from './transformer-factory.js';
 import { fetchTransformTemplate } from './transform-template-cache.js';
@@ -517,6 +517,11 @@ export async function handleMisubRequest(context) {
         const effectiveOptions = { ...globalSub.defaultOptions, ...profileSub.options };
         const flagMap = { udp: 'udp', emoji: 'emoji', scv: 'scv', sort: 'sort', tfo: 'tfo', list: 'list' };
         
+        // [元数据核心支持] 如果是 Meta 核心，告知第三方转换后端使用 Meta 语法
+        if (isMetaCore(userAgentHeader, url.searchParams)) {
+            externalUrl.searchParams.set('meta', 'true');
+        }
+
         Object.entries(flagMap).forEach(([key, paramName]) => {
             const val = url.searchParams.has(paramName) 
                 ? url.searchParams.get(paramName) === 'true' 
@@ -604,7 +609,8 @@ export async function handleMisubRequest(context) {
         skipCertVerify: finalSkipCertVerify,
         enableUdp: finalEnableUdp,
         enableTfo: finalEnableTfo,
-        ruleLevel: ruleLevel // 统一后的规则等级
+        ruleLevel: ruleLevel, // 统一后的规则等级
+        isMeta: isMetaCore(userAgentHeader, url.searchParams)
     };
 
     const managedConfigUrl = buildManagedConfigUrl(request.url);
