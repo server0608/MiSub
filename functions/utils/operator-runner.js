@@ -92,9 +92,27 @@ function opRename(nodes, params) {
         const rules = normalizeRules(regex.rules);
         if (rules.length > 0) {
             result = result.map(r => {
-                const newName = NodeUtils.applyRegexRename(r.name, rules);
+                const enriched = NodeUtils.ensureRegionInfo(r, true);
+                const vars = {
+                    name: r.name,
+                    protocol: r.protocol,
+                    region: enriched.region,
+                    regionZh: enriched.regionZh,
+                    emoji: enriched.emoji,
+                    server: r.server,
+                    port: r.port
+                };
+
+                // 核心增强：允许在正则替换中使用 {regionZh} 等变量
+                const processedRules = rules.map(rule => {
+                    if (typeof rule === 'object' && rule.replacement && rule.replacement.includes('{')) {
+                        return { ...rule, replacement: NodeUtils.renderTemplate(rule.replacement, vars, r) };
+                    }
+                    return rule;
+                });
+
+                const newName = NodeUtils.applyRegexRename(r.name, processedRules);
                 if (newName !== r.name) {
-                    // [核心修复] 即时同步 URL，防止改名在不同协议间丢失
                     return {
                         ...r,
                         name: newName,
@@ -204,16 +222,28 @@ async function opScript(nodes, params, context) {
             }
         }
 
-        const wrapper = `
-            ${finalScript}
-            if (typeof operator === 'function') {
-                return await operator($proxies, $context);
-            }
-            return $proxies;
-        `;
-
-        const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
-        const runner = new AsyncFunction('$proxies', '$context', '$utils', wrapper);
+        // 尝试使用更兼容的 Function 构造器，并减少包装复杂度
+        let runner;
+        try {
+            runner = new Function('$proxies', '$context', '$utils', `
+                const operator = async ($proxies, $context) => {
+                    ${finalScript}
+                    if (typeof operator === 'function') return await operator($proxies, $context);
+                    return $proxies;
+                };
+                return operator($proxies, $context);
+            `);
+        } catch (e) {
+            // 如果 Function 被彻底封死，我们尝试最后的 eval 降级
+            console.warn('[Operator] Function constructor blocked, trying eval fallback');
+            runner = ($proxies, $context, $utils) => {
+                return (async () => {
+                    // 这里是一个非常激进的尝试
+                    const fn = eval(`(async ($proxies, $context) => { ${finalScript}; return await operator($proxies, $context); })`);
+                    return await fn($proxies, $context);
+                })();
+            };
+        }
 
         const processedNodes = enrichedNodes.map(n => {
             if (n.name) n.name = n.name.replace(/[·•・∙]/g, '·');
