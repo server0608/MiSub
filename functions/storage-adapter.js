@@ -558,11 +558,9 @@ class D1StorageAdapter {
 
     async getSubscriptionsByIds(ids = []) {
         if (!Array.isArray(ids) || ids.length === 0) return [];
-        // D1 单条 SQL 最多绑定 100 个变量，超过会抛
-        // "too many SQL variables" 并导致整条查询失败。
-        // 分组引用较多节点/订阅时（如 >100）会触发此问题，
-        // 表现为订阅链接返回 "# No valid proxies found"。
-        // 因此按 90 一批分片查询后再合并结果。
+        // D1 单条 SQL 绑定变量上限为 100，超过会报
+        // "too many SQL variables" 而整条查询失败。
+        // 因此按 90 一批分片查询，再合并结果（同时保留原有 legacy 'main' 回退）。
         const CHUNK_SIZE = 90;
         const uniqueIds = Array.from(new Set(ids));
         try {

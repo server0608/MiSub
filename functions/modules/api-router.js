@@ -439,6 +439,23 @@ export async function handleApiRequest(request, env, context = null) {
         case '/node_count':
             return await handleLegacyNodeCountRequest(request, env);
 
+        case '/detect_airport_name': {
+            if (request.method !== 'POST') return createErrorResponse('Method Not Allowed', 405);
+            try {
+                const body = await readJsonWithLimit(request, JSON_BODY_LIMITS.normal);
+                const { inferAirportRootDomain, fetchAirportSiteTitle } =
+                    await import('../services/subscription-service.js');
+                const rootDomain = inferAirportRootDomain(body?.url || '');
+                if (!rootDomain) {
+                    return createJsonResponse({ success: true, name: '', rootDomain: '' });
+                }
+                const name = await fetchAirportSiteTitle(rootDomain, { timeout: 5000 });
+                return createJsonResponse({ success: true, name, rootDomain });
+            } catch (error) {
+                return createErrorResponse(`识别失败: ${error.message}`, 400);
+            }
+        }
+
         case '/nodes/health':
             return await handleHealthCheckRequest(request, env);
 

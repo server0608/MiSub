@@ -401,6 +401,16 @@
         showToast(t('manualNodes.groupOrderUpdated'), 'success');
     };
 
+    // 应用识别到的机场名（来自订阅响应头 / 官网标题）
+    const handleApplyDetectedName = (subscriptionId, name) => {
+        const target = String(name || '').trim();
+        if (!target) return;
+        const subscription = subscriptions.value.find((s) => s.id === subscriptionId);
+        if (!subscription) return;
+        updateSubscription(subscriptionId, { name: target });
+        showToast(t('subscriptions.nameApplied', { name: target }), 'success');
+    };
+
     // 节点预览处理函数
     const handlePreviewSubscription = (subscriptionId) => {
         const subscription = subscriptions.value.find((s) => s.id === subscriptionId);
@@ -491,6 +501,7 @@
                     @update-node-count="handleUpdateNodeCount"
                     @refresh-all="batchUpdateAllSubscriptions"
                     @edit="(id) => handleEditSubscription(subscriptions.find((s) => s.id === id))"
+                    @applyDetectedName="handleApplyDetectedName"
                     @toggle-sort="isSortingSubs = !isSortingSubs"
                     @mark-dirty="markDirty"
                     @delete-all="showDeleteSubsModal = true"

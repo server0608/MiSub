@@ -10,6 +10,7 @@
     import { useI18n } from '../../i18n/index.js';
     import { parseSurgeConfig } from '../../utils/protocolConverter.js';
     import { IMPORT_FILE_ACCEPT, readFilesAsText } from '../../utils/importFile.js';
+    import { buildAutoGroupName } from '../../utils/auto-group-name.js';
 
     const props = defineProps({
         show: Boolean,
@@ -59,6 +60,11 @@
                 fileCount > 1
                     ? t('manualNodes.fileImportPickedMulti', { count: fileCount })
                     : files[0].name;
+
+            // 自动填充分组名（用文件名），用户无需手填；已有分组时不覆盖
+            if (!(props.editingNode.group || '').trim()) {
+                props.editingNode.group = buildAutoGroupName({ fileName: files[0].name });
+            }
         } catch (error) {
             console.error('读取文件失败:', error);
             fileNameHint.value = error.message || t('manualNodes.fileImportFailed');
@@ -156,13 +162,13 @@
 
     const handleConfirm = () => {
         if (props.isNew && isMultiLine.value) {
-            // Pass group if specified (though bulk import logic might need update to support group, currently logic is simple)
-            // Actually handleBulkImport second arg was colorTag. Now it should be group.
-            // Let's check handleBulkImport usage.
-            // Line 107 in original: handleBulkImport(props.editingNode.url, props.editingNode.colorTag);
-            // Depending on useBulkImportLogic, we might need to update it too.
-            // For now, let's assume we pass group.
-            handleBulkImport(props.editingNode.url, props.editingNode.group);
+            // 多行批量导入：未填写分组时自动生成一个（用户无需手填）
+            let groupName = (props.editingNode.group || '').trim();
+            if (!groupName) {
+                groupName = buildAutoGroupName();
+                props.editingNode.group = groupName;
+            }
+            handleBulkImport(props.editingNode.url, groupName);
             emit('update:show', false);
             return;
         }

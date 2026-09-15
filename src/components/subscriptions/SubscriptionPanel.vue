@@ -1,5 +1,5 @@
 <script setup>
-    import { computed, ref } from 'vue';
+    import { computed, ref, nextTick } from 'vue';
     import draggable from 'vuedraggable';
     import Card from '../ui/Card.vue';
     import MoreActionsMenu from '@/components/shared/MoreActionsMenu.vue';
@@ -7,6 +7,8 @@
     import EmptyState from '@/components/ui/EmptyState.vue';
     import { useUIStore } from '@/stores/ui';
     import { useI18n } from '@/i18n/index.js';
+    import { inferAirportRootDomain } from '../../utils/airport-domain.js';
+    import { lookupDomainName } from '../../utils/domain-name-memory.js';
 
     const { layoutMode } = useUIStore();
     const { t } = useI18n();
@@ -37,6 +39,8 @@
         'import',
         'qrcode',
         'updateSearch',
+        'applyDetectedName',
+        'rename-group',
     ]);
 
     const searchModel = computed({
@@ -63,6 +67,85 @@
     const handleDeleteAll = () => emit('deleteAll');
     const handleRefreshAll = () => emit('refreshAll');
     const handleImport = () => emit('import');
+
+    // 应用识别到的机场名：模板内联箭头函数无法访问 emit，需用具名函数转发
+    // 一键重命名整组：转发给父组件并刷新折叠标题
+    const handleRenameGroup = (group) => {
+        emit('rename-group', group.items.map((it) => it.id), groupDetectedName(group));
+        setTimeout(refreshNameMemory, 0);
+    };
+
+    const handleApplyDetectedName = (subscription, name) => {
+        emit('applyDetectedName', subscription?.id, name);
+        // 父组件同步写入命名记忆，放到下一个 tick 刷新折叠标题
+        setTimeout(refreshNameMemory, 0);
+    };
+
+    /**
+     * 取该折叠组可用于重命名的名字（基础名）。
+     * 优先级：
+     *   1. 组内任一订阅的识别名（detectedName，来自 Profile-Title / 官网标题）
+     *   2. 组域名推断出的品牌名（如 gsafevpn.com -> Gsafevpn）
+     *   3. 组域名原文
+     * 始终返回非空（除非组本身无 host），保证按钮可用。
+     */
+    const prettifyHost = (host) => {
+        const raw = String(host || '').trim();
+        if (!raw) return '';
+        // 先去掉 sub1/api/dy11 之类的子域前缀，拿到机场主域名
+        const root = inferAirportRootDomain(`https://${raw}`) || raw;
+        const parts = root.split('.');
+        let main = parts[0];
+        // 处理 com.cn / co.uk 这类多段后缀
+        if (parts.length >= 3 && ['com', 'net', 'org', 'gov', 'edu', 'co'].includes(parts[1])) {
+            main = parts[1];
+        }
+        // 去掉带分隔符的常见拼接后缀（如 xxx-vpn），再首字母大写
+        // 注意：不剥离「紧贴」的 vpn（gsafevpn 应保留为 Gsafevpn）
+        const cleaned = main
+            .replace(/[-_](vpn|proxy|cloud|services?|network|sub|node)$/i, '')
+            .replace(/[-_]+/g, ' ')
+            .trim();
+        const base = cleaned || main;
+        return base.charAt(0).toUpperCase() + base.slice(1);
+    };
+
+    const groupDetectedName = (group) => {
+        const hit = (group?.items || []).find(
+            (item) => typeof item?.detectedName === 'string' && item.detectedName.trim()
+        );
+        if (hit) return hit.detectedName.trim();
+        if (group?.host) return prettifyHost(group.host);
+        return '';
+    };
+
+    /**
+     * 折叠组的显示名（标题栏）：
+     *   1. 该域名记住的机场名（用户确认过，最准）
+     *   2. 组内任一订阅的识别名
+     *   3. 组域名
+     */
+    // 命名记忆存于 localStorage（非响应式），用一个版本号触发重算，
+    // 使「重命名整组 / 应用识别名」后折叠标题立即更新。
+    const nameMemoryVersion = ref(0);
+
+    const groupDisplayName = (group) => {
+        // 依赖 version，改名后自动重算
+        void nameMemoryVersion.value;
+        const host = group?.host || '';
+        if (host) {
+            const remembered = lookupDomainName(host);
+            if (remembered) return remembered;
+        }
+        const detected = groupDetectedName(group);
+        if (detected) return detected;
+        return host || t('subscriptions.otherSources');
+    };
+
+    /** 通知命名记忆已更新，触发折叠标题重算 */
+    const refreshNameMemory = () => {
+        nameMemoryVersion.value += 1;
+    };
 
     // === 按站点自动折叠 ===
     // 同一家机场常有多个订阅链接（域名相同、路径 token 不同），逐个平铺会很乱。
@@ -267,6 +350,9 @@
                             @edit="handleEdit(subscription.id)"
                             @preview="handlePreview(subscription.id)"
                             @qrcode="handleQRCode(subscription.id)"
+                            @applyDetectedName="
+                                (name) => handleApplyDetectedName(subscription, name)
+                            "
                         />
                     </div>
                 </template>
@@ -278,12 +364,12 @@
                         <div
                             class="rounded-xl border border-gray-100/80 bg-white/70 shadow-sm dark:border-white/10 dark:bg-gray-900/50"
                         >
-                            <button
-                                type="button"
-                                class="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
-                                @click="toggleGroup(group.key)"
-                            >
-                                <div class="flex min-w-0 items-center gap-2">
+                            <div class="flex w-full items-center justify-between gap-3 px-4 py-3">
+                                <button
+                                    type="button"
+                                    class="flex min-w-0 flex-1 items-center gap-2 text-left"
+                                    @click="toggleGroup(group.key)"
+                                >
                                     <svg
                                         class="h-4 w-4 shrink-0 text-gray-400 transition-transform"
                                         :class="isGroupCollapsed(group.key) ? '-rotate-90' : ''"
@@ -300,22 +386,38 @@
                                     <span
                                         class="truncate font-semibold text-gray-800 dark:text-gray-100"
                                     >
-                                        {{ group.host || t('subscriptions.otherSources') }}
+                                        {{ groupDisplayName(group) }}
                                     </span>
                                     <span
                                         class="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-600 dark:bg-white/10 dark:text-gray-300"
                                     >
                                         {{ group.items.length }}
                                     </span>
+                                </button>
+                                <div class="flex shrink-0 items-center gap-2">
+                                    <!-- 一键重命名整组：使用识别到的机场名 + 序号，避免重名 -->
+                                    <button
+                                        v-if="groupDetectedName(group)"
+                                        type="button"
+                                        class="rounded-md border border-primary-500/30 px-2 py-1 text-[11px] font-medium text-primary-500 transition-colors hover:bg-primary-500/10 dark:text-primary-400"
+                                        :title="
+                                            t('subscriptions.renameGroupHint', {
+                                                name: groupDetectedName(group),
+                                            })
+                                        "
+                                        @click.stop="handleRenameGroup(group)"
+                                    >
+                                        {{ t('subscriptions.renameGroup') }}
+                                    </button>
+                                    <span class="text-xs text-gray-400">
+                                        {{
+                                            isGroupCollapsed(group.key)
+                                                ? t('subscriptions.expand')
+                                                : t('subscriptions.collapse')
+                                        }}
+                                    </span>
                                 </div>
-                                <span class="shrink-0 text-xs text-gray-400">
-                                    {{
-                                        isGroupCollapsed(group.key)
-                                            ? t('subscriptions.expand')
-                                            : t('subscriptions.collapse')
-                                    }}
-                                </span>
-                            </button>
+                            </div>
                             <div
                                 v-show="!isGroupCollapsed(group.key)"
                                 class="grid grid-cols-1 gap-4 border-t border-gray-100/80 p-4 md:grid-cols-2 dark:border-white/10"
@@ -334,6 +436,9 @@
                                         @edit="handleEdit(subscription.id)"
                                         @preview="handlePreview(subscription.id)"
                                         @qrcode="handleQRCode(subscription.id)"
+                                        @applyDetectedName="
+                                            (name) => handleApplyDetectedName(subscription, name)
+                                        "
                                     />
                                 </div>
                             </div>
@@ -359,6 +464,9 @@
                                 @edit="handleEdit(subscription.id)"
                                 @preview="handlePreview(subscription.id)"
                                 @qrcode="handleQRCode(subscription.id)"
+                                @applyDetectedName="
+                                    (name) => handleApplyDetectedName(subscription, name)
+                                "
                             />
                         </div>
                     </div>
@@ -379,6 +487,9 @@
                             @edit="handleEdit(subscription.id)"
                             @preview="handlePreview(subscription.id)"
                             @qrcode="handleQRCode(subscription.id)"
+                            @applyDetectedName="
+                                (name) => handleApplyDetectedName(subscription, name)
+                            "
                         />
                     </div>
                 </div>

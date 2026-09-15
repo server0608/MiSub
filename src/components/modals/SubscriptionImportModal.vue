@@ -11,6 +11,7 @@
     import ParseResult from './SubscriptionImport/ParseResult.vue';
     import GroupSelector from '../ui/GroupSelector.vue'; // Added
     import { readFilesAsText } from '../../utils/importFile.js';
+    import { buildAutoGroupName } from '../../utils/auto-group-name.js';
 
     const isDev = import.meta.env.DEV;
 
@@ -99,6 +100,10 @@
      * 上传本地文件导入：读取文件文本 → 后端解析 → 入库。
      */
     const importFiles = async (fileList) => {
+        // 用户未填分组时，用文件名自动生成，免去手填
+        if (!groupName.value.trim() && fileList?.length) {
+            groupName.value = buildAutoGroupName({ fileName: fileList[0].name });
+        }
         const targetGroupName = groupName.value;
         errorMessage.value = '';
         successMessage.value = '';
@@ -276,9 +281,7 @@
         <template #body>
             <div class="space-y-4">
                 <!-- 来源切换 -->
-                <div
-                    class="grid grid-cols-2 gap-1 p-1 bg-gray-100 dark:bg-white/5 misub-radius-lg"
-                >
+                <div class="grid grid-cols-2 gap-1 p-1 bg-gray-100 dark:bg-white/5 misub-radius-lg">
                     <button
                         type="button"
                         class="py-1.5 text-sm font-medium misub-radius-md transition-colors"

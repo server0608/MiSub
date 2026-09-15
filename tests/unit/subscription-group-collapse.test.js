@@ -1,19 +1,21 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { createPinia } from 'pinia';
 import SubscriptionPanel from '../../src/components/subscriptions/SubscriptionPanel.vue';
+import { clearDomainNameMemory } from '../../src/utils/domain-name-memory.js';
 
 /**
  * 订阅源「按站点自动折叠」回归测试。
  *
  * 场景：同一家机场常有多个订阅链接（域名相同、路径 token 不同），
  * 逐个平铺会导致列表杂乱。面板按 URL 域名自动聚合，同一站点折叠为一组。
+ *
+ * 注意：分组标题会经 prettifyHost 美化（sub1.gsafevpn.com -> Gsafevpn），
+ * 因此断言以「折叠结构 / 卡片数量」为准，不依赖具体显示文本。
  */
 
 const makeSub = (id, name, url) => ({ id, name, url, enabled: true });
 
-// 注意：SubscriptionPanel 的 Card 子组件会渲染较多内容，这里只关心分组结构，
-// 用 shallow 挂载避免深入渲染以防触发与网络相关的副作用。
 const mountPanel = (subscriptions) =>
     mount(SubscriptionPanel, {
         props: {
@@ -35,20 +37,25 @@ const mountPanel = (subscriptions) =>
     });
 
 describe('订阅源按站点折叠', () => {
+    beforeEach(() => {
+        // 清掉命名记忆，避免残留影响分组标题
+        clearDomainNameMemory();
+    });
+
     it('同一域名的多个订阅源聚合为一个分组', async () => {
         const subs = [
-            makeSub('a', 'sub1', 'https://sub1.gsafevpn.com/x/token1'),
-            makeSub('b', 'sub1', 'https://sub1.gsafevpn.com/x/token2'),
-            makeSub('c', 'sub1', 'https://sub1.gsafevpn.com/x/token3'),
+            makeSub('a', 's1', 'https://sub1.gsafevpn.com/x/token1'),
+            makeSub('b', 's2', 'https://sub1.gsafevpn.com/x/token2'),
+            makeSub('c', 's3', 'https://sub1.gsafevpn.com/x/token3'),
         ];
         const wrapper = mountPanel(subs);
         await wrapper.vm.$nextTick();
 
-        // 该分组标题应只出现一次，且带数量徽标 3
-        const html = wrapper.html();
-        const groupCount = (html.match(/sub1\.gsafevpn\.com/g) || []).length;
-        expect(groupCount).toBeGreaterThanOrEqual(1);
-        expect(html).toContain('>3<');
+        // 三张卡片都在（折叠但已渲染），且出现数量徽标 3
+        expect(wrapper.findAll('.stub-card')).toHaveLength(3);
+        expect(wrapper.html()).toContain('>3<');
+        // 有可折叠分组时会出现「折叠全部」
+        expect(wrapper.html()).toMatch(/折叠全部|Collapse all/);
     });
 
     it('单条目站点不折叠，直接平铺', async () => {
@@ -59,12 +66,13 @@ describe('订阅源按站点折叠', () => {
         const wrapper = mountPanel(subs);
         await wrapper.vm.$nextTick();
 
-        // 没有多条目分组时，不应出现折叠控件文案（展开全部按钮）
-        expect(wrapper.html()).not.toContain('展开全部');
-        expect(wrapper.html()).not.toContain('Collapse all');
+        // 没有多条目分组时，不应出现折叠控件（展开全部按钮）
+        expect(wrapper.html()).not.toMatch(/展开全部|Expand all/);
+        // 卡片照样两张平铺
+        expect(wrapper.findAll('.stub-card')).toHaveLength(2);
     });
 
-    it('不同域名不会互相聚合', async () => {
+    it('不同域名各自成组，不互相聚合', async () => {
         const subs = [
             makeSub('a', 'a', 'https://site-a.com/1'),
             makeSub('b', 'b', 'https://site-a.com/2'),
@@ -74,12 +82,13 @@ describe('订阅源按站点折叠', () => {
         const wrapper = mountPanel(subs);
         await wrapper.vm.$nextTick();
 
-        const html = wrapper.html();
-        expect(html).toContain('site-a.com');
-        expect(html).toContain('site-b.com');
+        // 两个分组，四张卡片全渲染；两组都带数量徽标 2
+        expect(wrapper.findAll('.stub-card')).toHaveLength(4);
+        const badgeCount = (wrapper.html().match(/>2</g) || []).length;
+        expect(badgeCount).toBeGreaterThanOrEqual(2);
     });
 
-    it('www. 前缀视为同一站点', async () => {
+    it('www. 前缀与裸域名归为同一组', async () => {
         const subs = [
             makeSub('a', 'a', 'https://www.example.com/1'),
             makeSub('b', 'b', 'https://example.com/2'),
@@ -87,9 +96,9 @@ describe('订阅源按站点折叠', () => {
         const wrapper = mountPanel(subs);
         await wrapper.vm.$nextTick();
 
-        // 归为同一组，标题使用去掉 www 的域名
-        const html = wrapper.html();
-        expect(html).toContain('example.com');
-        expect(html).not.toContain('www.example.com');
+        // 视为同站点 -> 折叠为一组（出现折叠控件），且标题不含 www.
+        expect(wrapper.html()).toMatch(/折叠全部|Collapse all/);
+        expect(wrapper.html()).not.toContain('www.example.com');
+        expect(wrapper.findAll('.stub-card')).toHaveLength(2);
     });
 });
