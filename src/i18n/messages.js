@@ -283,6 +283,11 @@ export const messages = {
         },
         subscriptions: {
             title: '机场订阅',
+            collapseAll: '折叠全部',
+            expandAll: '展开全部',
+            collapse: '收起',
+            expand: '展开',
+            otherSources: '其他来源',
             subtitle: '维护机场订阅源，添加/导入后可在卡片中查看节点、流量与到期信息。',
             unnamed: '未命名订阅',
             qrCodeTitle: '订阅二维码',
@@ -1617,6 +1622,11 @@ export const messages = {
         },
         subscriptions: {
             title: 'Sources',
+            collapseAll: 'Collapse all',
+            expandAll: 'Expand all',
+            collapse: 'Collapse',
+            expand: 'Expand',
+            otherSources: 'Other sources',
             subtitle: 'Manage sources; view nodes, traffic, expiry.',
             unnamed: 'Unnamed',
             qrCodeTitle: 'QR Code',
