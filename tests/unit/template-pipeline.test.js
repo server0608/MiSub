@@ -372,7 +372,7 @@ MATCH,节点选择
         expect(loonRendered).toContain('reality=true');
         expect(loonRendered).toContain('WG-01 = wireguard');
         expect(loonRendered).toContain(
-            `https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/${PINNED_RULE_REVISIONS.ACL4SSR}/Clash/Ruleset/OpenAi.list, policy=🤖 AI 服务, enabled=true`
+            `https://cdn.jsdelivr.net/gh/ACL4SSR/ACL4SSR@${PINNED_RULE_REVISIONS.ACL4SSR}/Clash/Ruleset/OpenAi.list, policy=🤖 AI 服务, enabled=true`
         );
         expect(loonRendered).toContain('🚀 节点选择 = select');
         expect(quanxRendered).toContain('[server_local]');
@@ -386,13 +386,13 @@ MATCH,节点选择
             'vmess=1.2.3.6:443, method=none, password=uuid-5678, obfs=ws,'
         );
         expect(quanxRendered).toContain(
-            `filter_remote, https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/${PINNED_RULE_REVISIONS.ACL4SSR}/Clash/Ruleset/OpenAi.list, tag=🤖 AI 服务, force-policy=🤖 AI 服务, update-interval=86400, enabled=true`
+            `filter_remote, https://cdn.jsdelivr.net/gh/ACL4SSR/ACL4SSR@${PINNED_RULE_REVISIONS.ACL4SSR}/Clash/Ruleset/OpenAi.list, tag=🤖 AI 服务, force-policy=🤖 AI 服务, update-interval=86400, enabled=true`
         );
         expect(quanxRendered).toContain('static=🚀 节点选择');
         expect(surgeRendered).not.toContain('SG-01 = vless');
         expect(surgeRendered).toContain('WG-01 = wireguard');
         expect(surgeRendered).toContain(
-            `RULE-SET,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/${PINNED_RULE_REVISIONS.ACL4SSR}/Clash/Ruleset/OpenAi.list,🤖 AI 服务`
+            `RULE-SET,https://cdn.jsdelivr.net/gh/ACL4SSR/ACL4SSR@${PINNED_RULE_REVISIONS.ACL4SSR}/Clash/Ruleset/OpenAi.list,🤖 AI 服务`
         );
         expect(surgeRendered).toContain('🚀 节点选择 = select');
     });
@@ -694,10 +694,10 @@ custom_proxy_group=🚀 节点选择\`select\`[]DIRECT\`.*
         );
 
         expect(providerUrls).toContain(
-            `https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/${PINNED_RULE_REVISIONS.ACL4SSR}/Clash/Providers/Ruleset/Telegram.yaml`
+            `https://cdn.jsdelivr.net/gh/ACL4SSR/ACL4SSR@${PINNED_RULE_REVISIONS.ACL4SSR}/Clash/Providers/Ruleset/Telegram.yaml`
         );
         expect(providerUrls).toContain(
-            `https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/${PINNED_RULE_REVISIONS.ACL4SSR}/Clash/Providers/ProxyGFWlist.yaml`
+            `https://cdn.jsdelivr.net/gh/ACL4SSR/ACL4SSR@${PINNED_RULE_REVISIONS.ACL4SSR}/Clash/Providers/ProxyGFWlist.yaml`
         );
     });
 
@@ -729,10 +729,10 @@ custom_proxy_group=🚀 节点选择\`select\`[]DIRECT\`.*
         );
 
         expect(providerUrls).not.toContain(
-            `https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/${PINNED_RULE_REVISIONS.ACL4SSR}/Clash/Providers/Ruleset/LocalAreaNetwork.yaml`
+            `https://cdn.jsdelivr.net/gh/ACL4SSR/ACL4SSR@${PINNED_RULE_REVISIONS.ACL4SSR}/Clash/Providers/Ruleset/LocalAreaNetwork.yaml`
         );
         expect(providerUrls).not.toContain(
-            `https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/${PINNED_RULE_REVISIONS.ACL4SSR}/Clash/Providers/Ruleset/BanAD.yaml`
+            `https://cdn.jsdelivr.net/gh/ACL4SSR/ACL4SSR@${PINNED_RULE_REVISIONS.ACL4SSR}/Clash/Providers/Ruleset/BanAD.yaml`
         );
         expect(localAreaProvider).toMatchObject({
             behavior: 'classical',
@@ -769,16 +769,16 @@ custom_proxy_group=🚀 节点选择\`select\`[]DIRECT\`.*
         const providerUrls = providers.map((provider) => provider.url);
 
         expect(providerUrls).toContain(
-            `https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/${PINNED_RULE_REVISIONS.ACL4SSR}/Clash/Providers/ChinaCompanyIp.yaml`
+            `https://cdn.jsdelivr.net/gh/ACL4SSR/ACL4SSR@${PINNED_RULE_REVISIONS.ACL4SSR}/Clash/Providers/ChinaCompanyIp.yaml`
         );
         expect(providerUrls).toContain(
-            `https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/${PINNED_RULE_REVISIONS.ACL4SSR}/Clash/Providers/ChinaIp.yaml`
+            `https://cdn.jsdelivr.net/gh/ACL4SSR/ACL4SSR@${PINNED_RULE_REVISIONS.ACL4SSR}/Clash/Providers/ChinaIp.yaml`
         );
         expect(providerUrls).toContain(
-            `https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/${PINNED_RULE_REVISIONS.ACL4SSR}/Clash/Providers/ChinaIpV6.yaml`
+            `https://cdn.jsdelivr.net/gh/ACL4SSR/ACL4SSR@${PINNED_RULE_REVISIONS.ACL4SSR}/Clash/Providers/ChinaIpV6.yaml`
         );
         expect(providerUrls).not.toContain(
-            `https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/${PINNED_RULE_REVISIONS.ACL4SSR}/Clash/ChinaCompanyIp.list`
+            `https://cdn.jsdelivr.net/gh/ACL4SSR/ACL4SSR@${PINNED_RULE_REVISIONS.ACL4SSR}/Clash/ChinaCompanyIp.list`
         );
 
         for (const provider of providers) {
@@ -810,7 +810,7 @@ custom_proxy_group=📥 下载服务\`select\`[]🚀 节点选择\`[]DIRECT
         );
 
         expect(Object.values(providers).map((provider) => provider.url)).not.toContain(
-            `https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/${PINNED_RULE_REVISIONS.ACL4SSR}/Clash/Providers/Download.yaml`
+            `https://cdn.jsdelivr.net/gh/ACL4SSR/ACL4SSR@${PINNED_RULE_REVISIONS.ACL4SSR}/Clash/Providers/Download.yaml`
         );
         expect(downloadProvider).toMatchObject({
             behavior: 'classical',
@@ -841,16 +841,16 @@ custom_proxy_group=🚀 节点选择\`select\`[]DIRECT\`.*
         );
 
         expect(providerUrls).toContain(
-            'https://raw.githubusercontent.com/szkane/ClashRuleSet/main/Clash/Apple.list'
+            'https://cdn.jsdelivr.net/gh/szkane/ClashRuleSet@main/Clash/Apple.list'
         );
         expect(providerUrls).toContain(
-            'https://raw.githubusercontent.com/szkane/ClashRuleSet/main/Clash/Microsoft.list'
+            'https://cdn.jsdelivr.net/gh/szkane/ClashRuleSet@main/Clash/Microsoft.list'
         );
         expect(providerUrls).not.toContain(
-            'https://raw.githubusercontent.com/szkane/ClashRuleSet/main/Clash/Providers/Apple.yaml'
+            'https://cdn.jsdelivr.net/gh/szkane/ClashRuleSet@main/Clash/Providers/Apple.yaml'
         );
         expect(providerUrls).not.toContain(
-            'https://raw.githubusercontent.com/szkane/ClashRuleSet/main/Clash/Providers/Ruleset/Microsoft.yaml'
+            'https://cdn.jsdelivr.net/gh/szkane/ClashRuleSet@main/Clash/Providers/Ruleset/Microsoft.yaml'
         );
         expect(Object.values(parsed['rule-providers'] || {})).toEqual(
             expect.arrayContaining([

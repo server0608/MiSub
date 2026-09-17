@@ -179,7 +179,11 @@ describe('Builtin template rule audit', () => {
         expect(Object.values(providers).every((provider) => provider.format === 'binary')).toBe(
             true
         );
-        expect(providers.ADS.url).toBe(REMOTE_SOURCES.ADS.singbox);
+        // 规则源应重写为国内可直连的 jsDelivr 镜像（raw.githubusercontent.com 在大陆不可达）
+        expect(providers.ADS.url).toBe(
+            'https://cdn.jsdelivr.net/gh/SagerNet/sing-geosite@0adeef8a3b9201292f6786ef4de81bcc02e971eb/geosite-category-ads-all.srs'
+        );
+        expect(providers.ADS.url).not.toContain('raw.githubusercontent.com');
     });
 
     it('emits sing-box ADS rule set as binary SRS in builtin config', () => {
@@ -193,7 +197,7 @@ describe('Builtin template rule audit', () => {
         expect(adsRuleSet).toMatchObject({
             type: 'remote',
             format: 'binary',
-            url: REMOTE_SOURCES.ADS.singbox,
+            url: 'https://cdn.jsdelivr.net/gh/SagerNet/sing-geosite@0adeef8a3b9201292f6786ef4de81bcc02e971eb/geosite-category-ads-all.srs',
             download_detour: DNS_PROXY_GROUP,
         });
     });

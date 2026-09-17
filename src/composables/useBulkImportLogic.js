@@ -97,7 +97,7 @@ export function useBulkImportLogic({ addSubscriptionsFromBulk, addNodesFromBulk 
         }
 
         if (validNodes.length > 0) {
-            addNodesFromBulk(validNodes);
+            addNodesFromBulk(validNodes, normalizedGroup);
             message += t('bulkImport.importedNodes', { count: validNodes.length });
         }
 

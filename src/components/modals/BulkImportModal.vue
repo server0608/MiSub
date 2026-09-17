@@ -10,6 +10,7 @@
     import { api } from '../../lib/http.js';
     import { generateNodeId } from '../../utils/id.js';
     import { readFilesAsText } from '../../utils/importFile.js';
+    import { buildAutoGroupName } from '../../utils/auto-group-name.js';
 
     const { t } = useI18n();
     const { manualNodeGroups } = useManualNodes(useDataStore().markDirty);
@@ -48,7 +49,10 @@
 
     const handleConfirm = () => {
         if (activeTab.value !== 'text') return;
-        emit('import', importText.value, selectedGroup.value); // group passed as second arg
+        // 未填分组时自动生成（用时间戳），免去手填
+        const group = selectedGroup.value.trim() || buildAutoGroupName();
+        selectedGroup.value = group;
+        emit('import', importText.value, group); // group passed as second arg
         importText.value = '';
         selectedGroup.value = '';
         setTimeout(() => {

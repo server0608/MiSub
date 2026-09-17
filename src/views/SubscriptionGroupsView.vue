@@ -12,6 +12,8 @@
     import SubscriptionEditModal from '../components/modals/SubscriptionEditModal.vue';
     import { useToastStore } from '../stores/toast.js';
     import { useI18n } from '../i18n/index.js';
+    import { inferAirportRootDomain } from '../utils/airport-domain.js';
+    import { rememberDomainName } from '../utils/domain-name-memory.js';
 
     const dataStore = useDataStore();
     const { showToast } = useToastStore();
@@ -84,6 +86,48 @@
     const previewSubscriptionName = ref('');
     const previewSubscriptionUrl = ref('');
 
+    // 一键重命名整个折叠组：用「识别名 + 两位序号」避免重名（同机场多账号场景）
+    const handleRenameGroup = (ids, baseName) => {
+        const base = String(baseName || '').trim();
+        if (!base || !Array.isArray(ids) || ids.length === 0) return;
+
+        const pad = String(ids.length).length;
+        let renamed = 0;
+
+        ids.forEach((id, index) => {
+            const targetSub = subscriptions.value.find((s) => s.id === id);
+            if (!targetSub) return;
+            const seq = String(index + 1).padStart(pad, '0');
+            // 单个订阅时不需要序号
+            const newName = ids.length > 1 ? `${base} ${seq}` : base;
+            if (targetSub.name === newName) return;
+            updateSubscription({ ...targetSub, name: newName });
+            renamed++;
+        });
+
+        if (renamed > 0) {
+            // 记住「域名 -> 机场名」，下次同域名的订阅可直接套用
+            const first = subscriptions.value.find((s) => s.id === ids[0]);
+            const dom = first ? inferAirportRootDomain(first.url) : '';
+            if (dom) rememberDomainName(dom, base);
+            showToast(t('subscriptions.groupRenamed', { name: base, count: renamed }), 'success');
+        }
+    };
+
+    // 应用识别到的机场名（来自订阅响应头 / 官网标题）
+    const handleApplyDetectedName = (subscriptionId, name) => {
+        const target = String(name || '').trim();
+        if (!target) return;
+        // useSubscriptions 的 updateSubscription 接收「完整订阅对象」而非 (id, patch)
+        const targetSub = subscriptions.value.find((s) => s.id === subscriptionId);
+        if (!targetSub) return;
+        updateSubscription({ ...targetSub, name: target });
+        // 记住「域名 -> 机场名」，下次同域名的订阅可直接套用
+        const dom = inferAirportRootDomain(targetSub.url);
+        if (dom) rememberDomainName(dom, target);
+        showToast(t('subscriptions.nameApplied', { name: target }), 'success');
+    };
+
     const handlePreviewSubscription = (subscriptionId) => {
         const subscription = subscriptions.value.find((s) => s.id === subscriptionId);
         if (subscription) {
@@ -140,6 +184,8 @@
             @import="openBulkImportModal"
             @qrcode="handleQRCode"
             @update-search="subscriptionSearchQuery = $event"
+            @applyDetectedName="handleApplyDetectedName"
+            @rename-group="handleRenameGroup"
         >
             <!-- Slot removed as user requested button move to dropdown -->
         </SubscriptionPanel>

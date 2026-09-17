@@ -1,6 +1,9 @@
 <script setup>
-    import { computed } from 'vue';
+    import { computed, ref } from 'vue';
     import { formatBytes } from '../../lib/utils.js';
+    import { inferAirportRootDomain } from '../../utils/airport-domain.js';
+    import { lookupDomainName } from '../../utils/domain-name-memory.js';
+    import { api } from '../../lib/http.js';
     import { TIMING } from '../../constants/timing.js';
     import Switch from './Switch.vue';
     import { useI18n } from '@/i18n/index.js';
@@ -12,7 +15,15 @@
         },
     });
 
-    const emit = defineEmits(['delete', 'change', 'update', 'edit', 'preview', 'qrcode']);
+    const emit = defineEmits([
+        'delete',
+        'change',
+        'update',
+        'edit',
+        'preview',
+        'qrcode',
+        'applyDetectedName',
+    ]);
     const { t } = useI18n();
 
     const getProtocol = (url) => {
@@ -29,6 +40,46 @@
     };
 
     const protocol = computed(() => getProtocol(props.misub.url));
+
+    // 机场自报名称（订阅响应头的 Profile-Title / Content-Disposition），仅用于展示提示
+    const detectedName = computed(() => {
+        const value = props.misub?.detectedName;
+        return typeof value === 'string' ? value.trim() : '';
+    });
+
+    // 机场主域名（可点击访问官网）
+    const rootDomain = computed(() => inferAirportRootDomain(props.misub?.url));
+
+    // 按需识别：仅在用户点击时抓取官网标题，避免常规刷新时的额外请求
+    const detecting = ref(false);
+    const localDetectedName = ref('');
+
+    // 该域名记住的名称（用户此前确认过），优先级高于自动识别
+    const rememberedName = computed(() =>
+        rootDomain.value ? lookupDomainName(rootDomain.value) : ''
+    );
+
+    // 展示优先级：用户记住的名称 > 响应头自报名称 > 本次识别结果
+    const effectiveDetectedName = computed(
+        () => rememberedName.value || detectedName.value || localDetectedName.value
+    );
+
+    const handleDetect = async () => {
+        if (detecting.value || !rootDomain.value) return;
+        detecting.value = true;
+        try {
+            const result = await api.post('/api/detect_airport_name', { url: props.misub.url });
+            const name = String(result?.name || '').trim();
+            if (name) {
+                localDetectedName.value = name;
+                emit('applyDetectedName', name);
+            }
+        } catch {
+            /* 识别失败静默处理，不影响其他功能 */
+        } finally {
+            detecting.value = false;
+        }
+    };
 
     const protocolStyle = computed(() => {
         const p = protocol.value;
@@ -165,6 +216,73 @@
                     >
                         {{ misub.name || t('subscriptions.unnamed') }}
                     </h3>
+                    <!-- 机场识别结果：优先响应头自报名称，其次官网标题。仅作提示，不覆盖用户命名。 -->
+                    <div
+                        v-if="effectiveDetectedName && effectiveDetectedName !== misub.name"
+                        class="mt-1 flex items-center gap-1 text-[11px] text-gray-400 dark:text-gray-500"
+                        :title="t('subscriptions.detectedNameHint')"
+                    >
+                        <svg
+                            class="h-3 w-3 shrink-0"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                            aria-hidden="true"
+                        >
+                            <path
+                                fill-rule="evenodd"
+                                d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z"
+                                clip-rule="evenodd"
+                            />
+                        </svg>
+                        <span class="truncate">{{ effectiveDetectedName }}</span>
+                        <button
+                            type="button"
+                            class="shrink-0 text-[11px] font-medium text-primary-500 hover:text-primary-600 dark:text-primary-400"
+                            :title="t('subscriptions.applyDetectedName')"
+                            @click.stop="emit('applyDetectedName', effectiveDetectedName)"
+                        >
+                            {{ t('subscriptions.applyDetectedNameShort') }}
+                        </button>
+                    </div>
+                    <!-- 未识别到名称时：提供手动触发识别（抓官网标题），按需请求 -->
+                    <div
+                        v-else-if="rootDomain && !localDetectedName"
+                        class="mt-1 flex items-center gap-1"
+                    >
+                        <button
+                            type="button"
+                            class="shrink-0 text-[11px] text-gray-400 hover:text-primary-500 dark:text-gray-500 dark:hover:text-primary-400"
+                            :disabled="detecting"
+                            :title="t('subscriptions.detectNameHint')"
+                            @click.stop="handleDetect"
+                        >
+                            {{
+                                detecting
+                                    ? t('subscriptions.detecting')
+                                    : t('subscriptions.detectName')
+                            }}
+                        </button>
+                    </div>
+                    <!-- 机场主域名：可点击访问官网 -->
+                    <a
+                        v-if="rootDomain"
+                        :href="`https://${rootDomain}`"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="mt-0.5 inline-flex items-center gap-1 text-[11px] text-gray-400 hover:text-primary-500 dark:text-gray-500 dark:hover:text-primary-400"
+                        :title="t('subscriptions.visitSite', { domain: rootDomain })"
+                        @click.stop
+                    >
+                        <svg class="h-3 w-3 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                            <path
+                                d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z"
+                            />
+                            <path
+                                d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z"
+                            />
+                        </svg>
+                        <span class="truncate">{{ rootDomain }}</span>
+                    </a>
                 </div>
 
                 <!-- Action Buttons (Visible on Hover/Touch) -->
