@@ -4,6 +4,7 @@ import './assets/main.css';
 import App from './App.vue';
 import router from './router';
 import { handleError, setToastHandler, configureErrorMonitoring } from './utils/errorHandler.js';
+import { isAppScriptError, isForeignRejection } from './utils/error-source.js';
 import { i18n } from './i18n/index.js';
 import { useToastStore } from './stores/toast.js';
 
@@ -23,6 +24,13 @@ if (typeof window !== 'undefined') {
                 window.location.reload();
             }
         }
+        // 浏览器扩展注入脚本 / 跨域第三方脚本导致的拒绝与自己无关（如扩展的
+        // reportAllChanges TypeError）。静默丢弃：preventDefault 同时抑制
+        // 浏览器默认的控制台报错输出，避免与 MiSub 无关的噪音。
+        if (isForeignRejection(event.reason)) {
+            event.preventDefault();
+            return;
+        }
         handleError(event.reason, 'Unhandled Promise Rejection', {
             type: 'promise_rejection',
         });
@@ -32,6 +40,11 @@ if (typeof window !== 'undefined') {
     // 处理全局JavaScript错误
     window.addEventListener('error', (event) => {
         if (event.target && event.target !== window) {
+            return;
+        }
+        if (!isAppScriptError({ filename: event.filename, message: event.message })) {
+            // 非本站脚本（扩展、跨域第三方、被抹平的 Script error.）不算应用故障
+            event.preventDefault();
             return;
         }
         handleError(event.error || new Error(event.message), 'Global JavaScript Error', {
