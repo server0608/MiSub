@@ -11,7 +11,11 @@
     import { useManualNodes } from '../composables/useManualNodes.js';
     import { formatBytes } from '../lib/utils.js';
     import StatCards from '../components/features/Dashboard/StatCards.vue';
-    import { getDashboardHealthItems, shouldShowFullGuide } from '../utils/dashboard-health.js';
+    import {
+        getDashboardHealthItems,
+        resolveHealthItemCopy,
+        shouldShowFullGuide,
+    } from '../utils/dashboard-health.js';
     import { useI18n } from '../i18n/index.js';
 
     const { t } = useI18n();
@@ -70,10 +74,23 @@
             profiles: profiles.value || [],
             settings: settings.value || {},
             totalNodesCount: totalNodesCount.value,
-        })
+        }).map((item) => resolveHealthItemCopy(item, t))
     );
 
     const hasHealthItems = computed(() => dashboardHealthItems.value.length > 0);
+
+    // How many health items to render before the "show more" toggle kicks in.
+    const HEALTH_ITEMS_COLLAPSED_COUNT = 4;
+    const showAllHealthItems = ref(false);
+    const visibleHealthItems = computed(() =>
+        showAllHealthItems.value
+            ? dashboardHealthItems.value
+            : dashboardHealthItems.value.slice(0, HEALTH_ITEMS_COLLAPSED_COUNT)
+    );
+    const hiddenHealthItemsCount = computed(() =>
+        Math.max(0, dashboardHealthItems.value.length - visibleHealthItems.value.length)
+    );
+
     const showFullGuide = computed(() =>
         shouldShowFullGuide({
             subscriptions: subscriptions.value || [],
@@ -109,16 +126,6 @@
         info: 'bg-sky-500',
     };
 
-    const handleHealthAction = (item) => {
-        if (item.action === 'openLog') {
-            showLogModal.value = true;
-            return;
-        }
-        if (item.actionRoute) {
-            router.push({ path: item.actionRoute, query: item.actionQuery || {} });
-        }
-    };
-
     const handleStatNavigate = (path, query = {}) => {
         router.push({ path, query });
     };
@@ -148,6 +155,27 @@
     // --- Log Modal Logic ---
     const showLogModal = ref(false);
     const LogModal = defineAsyncComponent(() => import('../components/modals/LogModal.vue'));
+
+    // Kept below the `showLogModal` declaration on purpose: this handler closes
+    // over it, so co-locating them keeps the dependency obvious and immune to a
+    // future refactor that might call it during setup.
+    //
+    // Only the PRIMARY button routes here. `item.action` is the *secondary*
+    // action key and must not be consulted: an item can carry both (e.g. the
+    // error card links to the filtered list AND offers "打开日志"), and reading
+    // `action` here used to short-circuit the primary navigation entirely.
+    const handleHealthAction = (item) => {
+        if (item.actionRoute) {
+            router.push({ path: item.actionRoute, query: item.actionQuery || {} });
+        }
+    };
+
+    // Secondary buttons dispatch the item's own action key instead of navigating.
+    const handleHealthSecondaryAction = (item) => {
+        if (item.action === 'openLog') {
+            showLogModal.value = true;
+        }
+    };
 
     // --- QRCode Modal Logic ---
     const QRCodeModal = defineAsyncComponent(() => import('../components/modals/QRCodeModal.vue'));
@@ -290,7 +318,7 @@
 
                         <div v-if="hasHealthItems" class="grid gap-3">
                             <div
-                                v-for="item in dashboardHealthItems"
+                                v-for="item in visibleHealthItems"
                                 :key="item.id"
                                 class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-[var(--misub-radius-md)] border p-3"
                                 :class="healthToneClasses[item.tone] || healthToneClasses.info"
@@ -322,14 +350,26 @@
                                         v-if="item.secondaryActionLabel"
                                         type="button"
                                         class="min-h-10 rounded-[var(--misub-radius-md)] border border-current/15 px-3 py-2 text-sm font-semibold opacity-80 hover:opacity-100 transition-opacity"
-                                        @click="
-                                            handleHealthAction({ action: item.secondaryAction })
-                                        "
+                                        @click="handleHealthSecondaryAction(item)"
                                     >
                                         {{ item.secondaryActionLabel }}
                                     </button>
                                 </div>
                             </div>
+                            <button
+                                v-if="hiddenHealthItemsCount > 0 || showAllHealthItems"
+                                type="button"
+                                class="min-h-10 justify-self-start rounded-[var(--misub-radius-md)] border border-gray-200/80 bg-white/70 px-3 py-2 text-sm font-semibold text-gray-600 hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 transition-colors"
+                                @click="showAllHealthItems = !showAllHealthItems"
+                            >
+                                {{
+                                    showAllHealthItems
+                                        ? t('dashboard.health.showLess')
+                                        : t('dashboard.health.showMore', {
+                                              count: hiddenHealthItemsCount,
+                                          })
+                                }}
+                            </button>
                         </div>
                         <div
                             v-else
