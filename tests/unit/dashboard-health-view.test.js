@@ -75,6 +75,8 @@ describe('DashboardView 待处理事项', () => {
         subscriptionsRef.value = [];
         pinia = createPinia();
         setActivePinia(pinia);
+        // Dismissals live in localStorage, so clear them between tests.
+        localStorage.clear();
         const dataStore = useDataStore();
         dataStore.profiles = [{ id: 'profile-1', name: '日常', enabled: true, customId: 'daily' }];
         useSettingsStore().setConfig({ mytoken: 'stable-token', profileToken: 'share-token' });
@@ -304,5 +306,119 @@ describe('DashboardView 待处理事项', () => {
 
         expect(wrapper.vm.showLogModal).toBe(true);
         expect(pushMock).not.toHaveBeenCalled();
+    });
+
+    // --- Dismissal ---
+
+    it('hides a dismissed item from the list and reports the hidden count', async () => {
+        subscriptionsRef.value = [
+            buildSub({ id: 'failed', lastError: 'timeout' }),
+            buildSub({ id: 'off', enabled: false }),
+        ];
+        useSettingsStore().setConfig({ mytoken: 'auto', profileToken: 'share-token' });
+
+        const wrapper = mountDashboard();
+        await wrapper.vm.$nextTick();
+
+        const before = wrapper.vm.dashboardHealthItems.map((i) => i.id);
+        expect(before).toContain('auto-token');
+        expect(before).toContain('disabled-subscriptions');
+
+        const dismiss = wrapper
+            .findAll('[data-testid="health-item-dismiss"]')
+            .find((b, idx) => wrapper.vm.visibleHealthItems[idx]?.id === 'auto-token');
+        await dismiss.trigger('click');
+
+        expect(wrapper.vm.dashboardHealthItems.map((i) => i.id)).not.toContain('auto-token');
+        expect(wrapper.vm.dismissedHealthItemsCount).toBe(1);
+        // The rest of the list is untouched.
+        expect(wrapper.vm.dashboardHealthItems.map((i) => i.id)).toContain(
+            'disabled-subscriptions'
+        );
+    });
+
+    it('shows a restore affordance only once something is dismissed', async () => {
+        subscriptionsRef.value = [buildSub({ id: 'failed', lastError: 'timeout' })];
+
+        const wrapper = mountDashboard();
+        await wrapper.vm.$nextTick();
+
+        const restore = () => wrapper.find('[data-testid="health-items-restore"]');
+        expect(restore().exists()).toBe(false);
+
+        await wrapper.find('[data-testid="health-item-dismiss"]').trigger('click');
+        expect(restore().exists()).toBe(true);
+        expect(restore().text()).toContain('1');
+    });
+
+    it('brings a dismissed item back on restore', async () => {
+        subscriptionsRef.value = [buildSub({ id: 'failed', lastError: 'timeout' })];
+
+        const wrapper = mountDashboard();
+        await wrapper.vm.$nextTick();
+
+        await wrapper.find('[data-testid="health-item-dismiss"]').trigger('click');
+        expect(wrapper.vm.dashboardHealthItems.length).toBe(0);
+        expect(wrapper.vm.hasHealthItems).toBe(false);
+
+        await wrapper.find('[data-testid="health-items-restore"]').trigger('click');
+
+        expect(wrapper.vm.dashboardHealthItems.length).toBe(1);
+        expect(wrapper.vm.dismissedHealthItemsCount).toBe(0);
+        expect(wrapper.find('[data-testid="health-items-restore"]').exists()).toBe(false);
+    });
+
+    it('persists a dismissal across a remount', async () => {
+        subscriptionsRef.value = [buildSub({ id: 'failed', lastError: 'timeout' })];
+
+        const first = mountDashboard();
+        await first.vm.$nextTick();
+        await first.find('[data-testid="health-item-dismiss"]').trigger('click');
+        first.unmount();
+
+        // A fresh mount reads the same localStorage record.
+        const second = mountDashboard();
+        await second.vm.$nextTick();
+
+        expect(second.vm.dashboardHealthItems.length).toBe(0);
+        expect(second.vm.dismissedHealthItemsCount).toBe(1);
+    });
+
+    it('renders the dismissal copy in English without leaking keys', async () => {
+        subscriptionsRef.value = [buildSub({ id: 'failed', lastError: 'timeout' })];
+
+        const wrapper = mountDashboard('en-US');
+        await wrapper.vm.$nextTick();
+
+        await wrapper.find('[data-testid="health-item-dismiss"]').trigger('click');
+
+        const restore = wrapper.find('[data-testid="health-items-restore"]');
+        expect(restore.text()).toContain('1 dismissed');
+        expect(wrapper.text()).not.toContain('dashboard.');
+    });
+
+    // --- Terminology ---
+
+    // The badge and the section title used to read "Pending" / "Pending" in
+    // English, which the user could not tell apart.
+    it('distinguishes the readiness badge from the section title', async () => {
+        subscriptionsRef.value = [buildSub({ id: 'failed', lastError: 'timeout' })];
+
+        const wrapper = mountDashboard('en-US');
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.vm.readinessText).toBe('Items pending');
+        expect(wrapper.text()).toContain('Pending items');
+        expect(wrapper.text()).not.toContain('有待处理事项');
+    });
+
+    it('keeps the Chinese badge and title wording distinct', async () => {
+        subscriptionsRef.value = [buildSub({ id: 'failed', lastError: 'timeout' })];
+
+        const wrapper = mountDashboard('zh-CN');
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.vm.readinessText).toBe('有待处理项');
+        expect(wrapper.text()).toContain('待处理事项');
     });
 });

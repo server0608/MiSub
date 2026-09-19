@@ -479,7 +479,7 @@ export const messages = {
                 waitingForSubscriptions: '等待导入订阅源',
                 waitingForProfiles: '等待创建组合订阅',
                 needsRefresh: '需要刷新节点',
-                hasPendingItems: '有待处理事项',
+                hasPendingItems: '有待处理项',
                 ready: '配置可用',
             },
             actions: {
@@ -495,6 +495,9 @@ export const messages = {
                 showLess: '收起',
                 allGood: '关键配置正常',
                 allGoodDesc: '已具备生成和复制订阅链接的基本条件。',
+                dismiss: '忽略',
+                dismissItem: '从列表中忽略该项（仅影响本机显示）',
+                restoreDismissed: '已忽略 {count} 项，点击恢复',
             },
             healthItems: {
                 missingSubscriptions: {
@@ -592,7 +595,7 @@ export const messages = {
             dashboardHint: '提示：常用操作在此，更多管理请前往对应模块。',
             linkCard: {
                 title: '生成订阅链接',
-                setupTitle: '链接生成前还差几步',
+                setupTitle: '生成链接还需几步',
                 mainTokenTitle: '固定主 Token',
                 mainTokenDesc: '默认订阅链接依赖主 Token，固定后客户端链接不会随自动值变化。',
                 profileTitle: '创建组合订阅',
@@ -1897,7 +1900,7 @@ export const messages = {
                 waitingForSubscriptions: 'Add sources',
                 waitingForProfiles: 'Add profiles',
                 needsRefresh: 'Refresh nodes',
-                hasPendingItems: 'Pending',
+                hasPendingItems: 'Items pending',
                 ready: 'Ready',
             },
             actions: {
@@ -1906,13 +1909,16 @@ export const messages = {
                 addProfile: 'Add profile',
             },
             health: {
-                title: 'Pending',
+                title: 'Pending items',
                 subtitle: 'Issues affecting availability.',
                 itemsCount: '{count} items',
                 showMore: 'Show {count} more',
                 showLess: 'Show less',
                 allGood: 'All normal',
                 allGoodDesc: 'Ready to generate links.',
+                dismiss: 'Dismiss',
+                dismissItem: 'Hide this item locally',
+                restoreDismissed: '{count} dismissed — restore',
             },
             healthItems: {
                 missingSubscriptions: {
