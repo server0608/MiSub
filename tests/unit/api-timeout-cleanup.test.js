@@ -34,6 +34,7 @@ describe('API request timeout cleanup', () => {
 
     it.each([
         ['fetchInitialData', 'get', () => import('../../src/lib/api.js')],
+        ['fetchPublicConfig', 'get', () => import('../../src/lib/api.js')],
         ['fetchNodeCount', 'post', () => import('../../src/lib/api.js')],
         ['batchUpdateNodes', 'post', () => import('../../src/lib/api.js')],
         ['testSubconverterBackend', 'post', () => import('../../src/lib/api.js')],
@@ -42,6 +43,7 @@ describe('API request timeout cleanup', () => {
         const apiModule = await loadApi();
 
         if (name === 'fetchInitialData') await apiModule.fetchInitialData();
+        if (name === 'fetchPublicConfig') await apiModule.fetchPublicConfig();
         if (name === 'fetchNodeCount') await apiModule.fetchNodeCount('https://example.com/sub');
         if (name === 'batchUpdateNodes') await apiModule.batchUpdateNodes(['sub-1']);
         if (name === 'testSubconverterBackend') {

@@ -177,11 +177,23 @@ export async function fetchSettings() {
 }
 
 export async function fetchPublicConfig() {
+    let timeoutId;
     try {
-        const data = await api.get('/api/public_config');
+        const controller = new AbortController();
+        timeoutId = setTimeout(() => controller.abort(), 8000);
+        const headers =
+            typeof window !== 'undefined' && window.location?.pathname
+                ? { 'X-MiSub-Path': window.location.pathname }
+                : undefined;
+        const data = await api.get('/api/public_config', {
+            signal: controller.signal,
+            headers,
+        });
         return { success: true, data };
     } catch (error) {
         return handleApiError(error, 'fetchPublicConfig');
+    } finally {
+        clearTimeout(timeoutId);
     }
 }
 
