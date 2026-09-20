@@ -21,6 +21,15 @@ describe('main.js 全局错误处理器接线', () => {
         );
     });
 
+    it('资源错误处理使用已定义的本地环境与同源判断', () => {
+        expect(mainSource).toMatch(
+            /import\s*\{[^}]*isLocalHost[^}]*isSameOriginUrl[^}]*\}\s*from\s*'\.\/utils\/url-origin\.js'/
+        );
+        expect(mainSource).toContain('const localHost = isLocalHost(window.location.hostname);');
+        expect(mainSource).toContain('isSameOriginResource(resourceUrl)');
+        expect(mainSource).not.toContain('if (isLocalHost &&');
+    });
+
     const handlers = [
         ["'unhandledrejection'", 'isForeignRejection'],
         ["'error'", 'isAppScriptError'],
