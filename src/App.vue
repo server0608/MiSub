@@ -1,6 +1,7 @@
 <script setup>
     import { defineAsyncComponent, onMounted, onUnmounted, watch, computed, ref } from 'vue';
     import RouteErrorBoundary from './components/ui/RouteErrorBoundary.vue';
+    import ConfirmDialog from './components/ui/ConfirmDialog.vue';
     import { useRoute, useRouter } from 'vue-router';
     import { useThemeStore } from './stores/theme';
     import { useSessionStore } from './stores/session';
@@ -415,6 +416,7 @@
         </main>
 
         <Toast />
+        <ConfirmDialog />
         <LegacyD1MigrationModal
             :show="showLegacyD1MigrationModal"
             :details="legacyD1Details"

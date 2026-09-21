@@ -4,6 +4,7 @@ import { DEFAULT_SETTINGS } from '../constants/default-settings.js';
 import { fetchSettings, saveSettings, resetSettings } from '../lib/api.js';
 import { useBackupLogic } from './useBackupLogic.js';
 import { t, setLocale } from '../i18n/index.js';
+import { confirmAction } from './useConfirm.js';
 
 function normalizeExternalApiConfig(value) {
     const defaults = DEFAULT_SETTINGS.externalApi;
@@ -173,11 +174,19 @@ export function useSettingsLogic() {
      * 处理恢复出厂设置
      */
     const handleReset = async () => {
-        if (!confirm(t('settings.resetConfirm'))) {
+        const firstConfirmed = await confirmAction({
+            message: t('settings.resetConfirm'),
+            variant: 'danger',
+        });
+        if (!firstConfirmed) {
             return;
         }
 
-        if (!confirm(t('settings.resetConfirmAgain'))) {
+        const secondConfirmed = await confirmAction({
+            message: t('settings.resetConfirmAgain'),
+            variant: 'danger',
+        });
+        if (!secondConfirmed) {
             return;
         }
 
