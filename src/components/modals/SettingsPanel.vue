@@ -15,6 +15,7 @@
     import GlobalSettings from '../settings/sections/GlobalSettings.vue';
 
     import ClientSettings from '../settings/sections/ClientSettings.vue';
+    import CustomPageSettings from '../settings/sections/CustomPageSettings.vue';
     import SystemSettings from '../settings/sections/SystemSettings.vue';
     import WebdavBackupSettings from '../settings/sections/WebdavBackupSettings.vue';
 
@@ -29,6 +30,7 @@
         loadSettings,
         handleSave,
         handleMigrationSuccess,
+        handleReset,
         exportBackup,
         importBackup,
     } = useSettingsLogic();
@@ -48,6 +50,8 @@
                 return t('settings.tabs.service');
             case 'client':
                 return t('settings.tabs.client');
+            case 'custom-page':
+                return t('settings.tabs.customPage');
             case 'system':
                 return t('settings.tabs.system');
             default:
@@ -107,12 +111,14 @@
                 <GlobalSettings v-show="activeTab === 'global'" :settings="settings" />
                 <ServiceSettings v-show="activeTab === 'service'" :settings="settings" />
                 <ClientSettings v-show="activeTab === 'client'" />
+                <CustomPageSettings v-show="activeTab === 'custom-page'" :settings="settings" />
                 <div v-show="activeTab === 'system'" class="space-y-6">
                     <WebdavBackupSettings :settings="settings" />
                     <SystemSettings
                         :settings="settings"
                         :exportBackup="exportBackup"
                         :importBackup="importBackup"
+                        :handleReset="handleReset"
                         @migrate="showMigrationModal = true"
                     />
                 </div>
