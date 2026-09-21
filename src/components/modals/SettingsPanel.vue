@@ -1,23 +1,8 @@
 ﻿<script setup>
-    import { useI18n } from '../../i18n/index.js';
-
-    const { t } = useI18n();
-    import { ref, onMounted, computed } from 'vue';
+    import { ref, onMounted } from 'vue';
     import MigrationModal from './MigrationModal.vue';
     import { useSettingsLogic } from '../../composables/useSettingsLogic.js';
-    import SettingsLayout from '../layout/SettingsLayout.vue';
-
-    // 导入侧边栏和设置组件
-    import SettingsSidebar from '../settings/SettingsSidebar.vue';
-    import BasicSettings from '../settings/sections/BasicSettings.vue';
-    import HomeSettings from '../settings/sections/HomeSettings.vue';
-    import ServiceSettings from '../settings/sections/ServiceSettings.vue';
-    import GlobalSettings from '../settings/sections/GlobalSettings.vue';
-
-    import ClientSettings from '../settings/sections/ClientSettings.vue';
-    import CustomPageSettings from '../settings/sections/CustomPageSettings.vue';
-    import SystemSettings from '../settings/sections/SystemSettings.vue';
-    import WebdavBackupSettings from '../settings/sections/WebdavBackupSettings.vue';
+    import SettingsContent from '../settings/SettingsContent.vue';
 
     const {
         settings,
@@ -35,29 +20,7 @@
         importBackup,
     } = useSettingsLogic();
 
-    // 添加标签页状态 (与新布局一致)
     const activeTab = ref('basic');
-
-    const currentTabLabel = computed(() => {
-        switch (activeTab.value) {
-            case 'basic':
-                return t('settings.tabs.basic');
-            case 'home':
-                return t('settings.tabs.home');
-            case 'global':
-                return t('settings.tabs.global');
-            case 'service':
-                return t('settings.tabs.service');
-            case 'client':
-                return t('settings.tabs.client');
-            case 'custom-page':
-                return t('settings.tabs.customPage');
-            case 'system':
-                return t('settings.tabs.system');
-            default:
-                return t('settings.title');
-        }
-    });
 
     // 组件挂载时加载设置
     onMounted(() => {
@@ -76,90 +39,22 @@
     <div
         class="w-full h-full min-h-[520px] overflow-hidden bg-white/50 dark:bg-gray-900/50 misub-radius-lg"
     >
-        <SettingsLayout class="h-full !shadow-none !border-0 !rounded-none !bg-transparent">
-            <template #sidebar>
-                <SettingsSidebar v-model:activeTab="activeTab" />
-            </template>
-
-            <div v-if="isLoading" class="text-center p-8">
-                <p class="text-gray-500">{{ t('settings.loading') }}</p>
-            </div>
-            <div v-else class="space-y-6 max-w-6xl w-full mx-auto pt-2">
-                <div
-                    class="flex flex-wrap items-center justify-between gap-3 p-4 bg-white/70 dark:bg-gray-900/60 border border-gray-100/80 dark:border-white/10 misub-radius-lg shadow-sm"
-                >
-                    <div>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">
-                            {{ t('settings.currentModule') }}
-                        </p>
-                        <p class="text-lg font-semibold text-gray-900 dark:text-white">
-                            {{ currentTabLabel }}
-                        </p>
-                    </div>
-                    <div
-                        class="text-xs text-gray-500 dark:text-gray-400 bg-white/70 dark:bg-white/5 border border-gray-200/60 dark:border-white/10 px-3 py-1.5 misub-radius-pill"
-                    >
-                        {{ t('settings.saveHint') }}
-                    </div>
-                </div>
-                <BasicSettings
-                    v-show="activeTab === 'basic'"
-                    :settings="settings"
-                    :disguiseConfig="disguiseConfig"
-                />
-                <HomeSettings v-show="activeTab === 'home'" :settings="settings" />
-                <GlobalSettings v-show="activeTab === 'global'" :settings="settings" />
-                <ServiceSettings v-show="activeTab === 'service'" :settings="settings" />
-                <ClientSettings v-show="activeTab === 'client'" />
-                <CustomPageSettings v-show="activeTab === 'custom-page'" :settings="settings" />
-                <div v-show="activeTab === 'system'" class="space-y-6">
-                    <WebdavBackupSettings :settings="settings" />
-                    <SystemSettings
-                        :settings="settings"
-                        :exportBackup="exportBackup"
-                        :importBackup="importBackup"
-                        :handleReset="handleReset"
-                        @migrate="showMigrationModal = true"
-                    />
-                </div>
-            </div>
-
-            <template #footer>
-                <button
-                    @click="handleSave"
-                    :disabled="isSaving || hasWhitespace || !isStorageTypeValid"
-                    class="px-6 py-2.5 misub-radius-lg text-white text-sm font-medium shadow-sm transition-all flex items-center gap-2"
-                    :class="
-                        isSaving
-                            ? 'bg-gray-400 cursor-not-allowed'
-                            : 'bg-primary-600 hover:bg-primary-700 hover:shadow-md active:scale-95'
-                    "
-                >
-                    <svg
-                        v-if="isSaving"
-                        class="animate-spin h-4 w-4 text-white"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                    >
-                        <circle
-                            class="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            stroke-width="4"
-                        ></circle>
-                        <path
-                            class="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
-                    </svg>
-                    <span>{{ isSaving ? t('settings.saving') : t('settings.saveChanges') }}</span>
-                </button>
-            </template>
-        </SettingsLayout>
+        <SettingsContent
+            v-model:activeTab="activeTab"
+            :settings="settings"
+            :disguise-config="disguiseConfig"
+            :is-loading="isLoading"
+            :is-saving="isSaving"
+            :has-whitespace="hasWhitespace"
+            :is-storage-type-valid="isStorageTypeValid"
+            :export-backup="exportBackup"
+            :import-backup="importBackup"
+            :handle-reset="handleReset"
+            always-show-header
+            layout-class="h-full !shadow-none !border-0 !rounded-none !bg-transparent"
+            @save="handleSave"
+            @migrate="showMigrationModal = true"
+        />
 
         <MigrationModal v-model:show="showMigrationModal" @success="handleMigrationSuccess" />
     </div>

@@ -3,11 +3,24 @@ import { describe, expect, it } from 'vitest';
 const readSource = async (path) =>
     await import('node:fs/promises').then(({ readFile }) => readFile(path, 'utf8'));
 
-/** 提取源码中所有 `activeTab === 'xxx'` 的取值（即容器实际渲染的 tab） */
+const SIDEBAR = 'src/components/settings/SettingsSidebar.vue';
+const CONTENT = 'src/components/settings/SettingsContent.vue';
+const CONTAINERS = [
+    { name: 'SettingsPanel.vue（设置弹窗）', path: 'src/components/modals/SettingsPanel.vue' },
+    { name: 'SettingsView.vue（设置页）', path: 'src/views/SettingsView.vue' },
+];
+
+/** 侧边栏声明的 tab id（分组结构：{ id: 'xxx', labelKey: 'settings.tabs.*' }） */
+const extractSidebarTabs = (source) =>
+    [...source.matchAll(/\{\s*id:\s*'([a-z-]+)',\s*labelKey:\s*'settings\.tabs\./g)].map(
+        (match) => match[1]
+    );
+
+/** 源码中所有 `activeTab === 'xxx'` 的取值（即实际渲染出来的 tab） */
 const extractRenderedTabs = (source) =>
     [...source.matchAll(/activeTab\s*===\s*'([a-z-]+)'/g)].map((match) => match[1]);
 
-/** 提取 currentTabLabel 的 switch 中所有 case 值 */
+/** currentTabLabel 的 switch 中所有 case 值 */
 const extractLabelCases = (source) => {
     const block = source.match(/const currentTabLabel = computed\(\(\) => \{[\s\S]*?\n    \}\);/);
     if (!block) return [];
@@ -15,51 +28,39 @@ const extractLabelCases = (source) => {
 };
 
 /**
- * 设置界面存在两个容器：SettingsPanel.vue（弹窗）与 SettingsView.vue（独立页面），
- * 二者共用同一个 SettingsSidebar.vue。历史上出现过「侧边栏有 tab、容器却没渲染」
- * 的情况（custom-page 点开是空白；handleReset 未传入导致重置按钮无效）。
- * 这里用静态断言把三者锁在一起，避免同类问题再次发生。
+ * 设置界面此前有两个各自实现的容器（SettingsPanel.vue 弹窗 / SettingsView.vue 独立页面），
+ * 约 90% 逐行重复，直接导致过两个线上缺陷：弹窗漏渲染 custom-page（点开是空白）、
+ * 弹窗漏传 handleReset（重置按钮点了没反应）。现在 section 列表、头部信息卡、
+ * 加载态与保存按钮都收敛到 SettingsContent.vue，这组断言用来锁住这次收敛。
  */
 describe('设置页信息架构一致性', () => {
-    const containers = [
-        { name: 'SettingsPanel.vue（设置弹窗）', path: 'src/components/modals/SettingsPanel.vue' },
-        { name: 'SettingsView.vue（设置页）', path: 'src/views/SettingsView.vue' },
-    ];
-
-    it('侧边栏声明的每个 tab 都能在两个容器中渲染出来', async () => {
-        const sidebar = await readSource('src/components/settings/SettingsSidebar.vue');
-        const sidebarTabs = [
-            ...sidebar.matchAll(/\{\s*id:\s*'([a-z-]+)',\s*labelKey:\s*'settings\.tabs\./g),
-        ].map((match) => match[1]);
-
+    it('共享内容组件渲染了侧边栏声明的每一个 tab', async () => {
+        const sidebarTabs = extractSidebarTabs(await readSource(SIDEBAR));
         expect(sidebarTabs.length).toBeGreaterThan(0);
 
-        for (const { name, path } of containers) {
-            const rendered = new Set(extractRenderedTabs(await readSource(path)));
-            const missing = sidebarTabs.filter((id) => !rendered.has(id));
-            expect(missing, `${name} 未渲染这些 tab：${missing.join(', ')}`).toEqual([]);
-        }
+        const rendered = new Set(extractRenderedTabs(await readSource(CONTENT)));
+        const missing = sidebarTabs.filter((id) => !rendered.has(id));
+        expect(missing, `SettingsContent.vue 未渲染这些 tab：${missing.join(', ')}`).toEqual([]);
     });
 
-    it('两个容器的 currentTabLabel 覆盖全部 tab，避免标题回退成「设置」', async () => {
-        const sidebar = await readSource('src/components/settings/SettingsSidebar.vue');
-        const sidebarTabs = [
-            ...sidebar.matchAll(/\{\s*id:\s*'([a-z-]+)',\s*labelKey:\s*'settings\.tabs\./g),
-        ].map((match) => match[1]);
-
-        for (const { name, path } of containers) {
-            const cases = new Set(extractLabelCases(await readSource(path)));
-            const missing = sidebarTabs.filter((id) => !cases.has(id));
-            expect(missing, `${name} 的 currentTabLabel 缺少分支：${missing.join(', ')}`).toEqual(
-                []
-            );
-        }
+    it('共享内容组件的 currentTabLabel 覆盖全部 tab，避免标题回退成「设置」', async () => {
+        const sidebarTabs = extractSidebarTabs(await readSource(SIDEBAR));
+        const cases = new Set(extractLabelCases(await readSource(CONTENT)));
+        const missing = sidebarTabs.filter((id) => !cases.has(id));
+        expect(missing, `currentTabLabel 缺少这些分支：${missing.join(', ')}`).toEqual([]);
     });
 
-    it('两个容器都向 SystemSettings 传入 handleReset，避免重置按钮点了没反应', async () => {
-        for (const { name, path } of containers) {
+    it('两个容器都复用共享内容组件，而不是各自再实现一份', async () => {
+        for (const { name, path } of CONTAINERS) {
             const source = await readSource(path);
-            expect(source, `${name} 未传入 handleReset`).toMatch(/:handleReset="handleReset"/);
+
+            expect(source, `${name} 未使用 SettingsContent`).toContain('<SettingsContent');
+            expect(source, `${name} 未传递 handleReset`).toMatch(/:handle-reset="handleReset"/);
+
+            // 容器一旦重新直接引用 section，就意味着重复实现又回来了
+            expect(source, `${name} 又直接引用了 section 组件`).not.toMatch(
+                /sections\/[A-Za-z]+Settings\.vue/
+            );
         }
     });
 });
