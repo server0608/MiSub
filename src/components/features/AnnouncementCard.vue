@@ -205,8 +205,9 @@
                         <button
                             v-if="announcement.dismissible"
                             @click="dismiss"
-                            class="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-black/5 dark:hover:bg-white/5 transition-all"
+                            class="p-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-black/5 dark:hover:bg-white/5 transition-all touch-target"
                             :title="t('common.dismissAnnouncement')"
+                            :aria-label="t('common.dismissAnnouncement')"
                         >
                             <svg
                                 class="h-4 w-4"
@@ -231,7 +232,7 @@
 
                     <div
                         v-if="announcement.updatedAt"
-                        class="pt-2 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest flex items-center gap-2"
+                        class="pt-2 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest flex items-center gap-2"
                     >
                         <span class="w-1 h-1 rounded-full bg-current opacity-40"></span>
                         {{

@@ -42,7 +42,7 @@
             ></span>
             <svg
                 class="mr-2 md:mr-3 flex-shrink-0 h-5 w-5 md:h-6 md:w-6"
-                :class="activeTab === tab.id ? 'text-white' : 'text-gray-400 dark:text-gray-500'"
+                :class="activeTab === tab.id ? 'text-white' : 'text-gray-500 dark:text-gray-400'"
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"

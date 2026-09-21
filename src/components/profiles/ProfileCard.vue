@@ -90,8 +90,9 @@
             >
                 <button
                     @click.stop="emit('preview')"
-                    class="p-2.5 rounded-full hover:bg-primary-50 dark:hover:bg-white/10 text-gray-400 hover:text-primary-500 transition-colors min-w-[44px] min-h-[44px] lg:min-w-0 lg:min-h-0 flex items-center justify-center"
+                    class="p-2.5 rounded-full hover:bg-primary-50 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 hover:text-primary-500 transition-colors min-w-[44px] min-h-[44px] lg:min-w-0 lg:min-h-0 flex items-center justify-center"
                     :title="t('actions.previewNodes')"
+                    :aria-label="t('actions.previewNodes')"
                 >
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -115,8 +116,9 @@
                 </button>
                 <button
                     @click.stop="emit('qrcode')"
-                    class="p-2.5 rounded-full hover:bg-primary-50 dark:hover:bg-white/10 text-gray-400 hover:text-primary-500 transition-colors min-w-[44px] min-h-[44px] lg:min-w-0 lg:min-h-0 flex items-center justify-center"
+                    class="p-2.5 rounded-full hover:bg-primary-50 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 hover:text-primary-500 transition-colors min-w-[44px] min-h-[44px] lg:min-w-0 lg:min-h-0 flex items-center justify-center"
                     :title="t('actions.showQrCode')"
+                    :aria-label="t('actions.showQrCode')"
                 >
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -140,8 +142,9 @@
                 </button>
                 <button
                     @click.stop="emit('edit')"
-                    class="p-2.5 rounded-full hover:bg-primary-50 dark:hover:bg-white/10 text-gray-400 hover:text-primary-500 transition-colors min-w-[44px] min-h-[44px] lg:min-w-0 lg:min-h-0 flex items-center justify-center"
+                    class="p-2.5 rounded-full hover:bg-primary-50 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 hover:text-primary-500 transition-colors min-w-[44px] min-h-[44px] lg:min-w-0 lg:min-h-0 flex items-center justify-center"
                     :title="t('actions.edit')"
+                    :aria-label="t('actions.edit')"
                 >
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -160,8 +163,9 @@
                 </button>
                 <button
                     @click.stop="emit('delete')"
-                    class="p-2.5 rounded-full hover:bg-red-50 dark:hover:bg-red-500/20 text-gray-400 hover:text-red-500 transition-colors min-w-[44px] min-h-[44px] lg:min-w-0 lg:min-h-0 flex items-center justify-center"
+                    class="p-2.5 rounded-full hover:bg-red-50 dark:hover:bg-red-500/20 text-gray-500 dark:text-gray-400 hover:text-red-500 transition-colors min-w-[44px] min-h-[44px] lg:min-w-0 lg:min-h-0 flex items-center justify-center"
                     :title="t('actions.delete')"
+                    :aria-label="t('actions.delete')"
                 >
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -261,8 +265,9 @@
                 <template v-if="isSorting">
                     <button
                         @click="emit('move-up')"
-                        class="p-1 rounded-full hover:bg-gray-500/10 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                        class="p-1 rounded-full hover:bg-gray-500/10 text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 touch-target"
                         :title="t('actions.moveUp')"
+                        :aria-label="t('actions.moveUp')"
                     >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -281,8 +286,9 @@
                     </button>
                     <button
                         @click="emit('move-down')"
-                        class="p-1 rounded-full hover:bg-gray-500/10 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                        class="p-1 rounded-full hover:bg-gray-500/10 text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 touch-target"
                         :title="t('actions.moveDown')"
+                        :aria-label="t('actions.moveDown')"
                     >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"

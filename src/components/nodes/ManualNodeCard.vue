@@ -220,8 +220,9 @@
         >
             <button
                 @click.stop="emit('ping')"
-                class="rounded-md p-2 text-gray-400 transition-colors hover:bg-green-500/10 hover:text-green-500"
+                class="rounded-md p-2 text-gray-500 dark:text-gray-400 transition-colors hover:bg-green-500/10 hover:text-green-500"
                 :title="t('actions.ping')"
+                :aria-label="t('actions.ping')"
                 :disabled="isPinging"
                 :class="{ 'animate-pulse text-green-500': isPinging }"
             >
@@ -242,8 +243,9 @@
             </button>
             <button
                 @click.stop="emit('edit')"
-                class="rounded-md p-2 text-gray-400 transition-colors hover:bg-gray-500/10 hover:text-gray-600 dark:hover:text-gray-200"
+                class="rounded-md p-2 text-gray-500 dark:text-gray-400 transition-colors hover:bg-gray-500/10 hover:text-gray-600 dark:hover:text-gray-200"
                 :title="t('actions.edit')"
+                :aria-label="t('actions.edit')"
             >
                 <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -262,8 +264,9 @@
             </button>
             <button
                 @click.stop="emit('delete')"
-                class="rounded-md p-2 text-gray-400 transition-colors hover:bg-red-500/10 hover:text-red-500"
+                class="rounded-md p-2 text-gray-500 dark:text-gray-400 transition-colors hover:bg-red-500/10 hover:text-red-500"
                 :title="t('actions.delete')"
+                :aria-label="t('actions.delete')"
             >
                 <svg
                     xmlns="http://www.w3.org/2000/svg"

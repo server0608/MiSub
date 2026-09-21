@@ -3,6 +3,9 @@
     import { storeToRefs } from 'pinia';
     import { TRANSFORM_ASSETS } from '@/constants/transform-assets';
     import { useDataStore } from '@/stores/useDataStore.js';
+    import { useI18n } from '../../i18n/index.js';
+
+    const { t } = useI18n();
 
     const props = defineProps({
         modelValue: { type: String, default: '' },
@@ -245,7 +248,7 @@
             <select
                 :value="selectedUrl"
                 @change="handleSelectChange"
-                class="block w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 pr-8 text-sm shadow-xs focus:border-indigo-500 focus:outline-hidden focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                class="block w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 pr-8 text-sm shadow-xs focus:border-indigo-500 focus-visible:outline-hidden focus-visible:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
             >
                 <option value="">
                     {{ placeholder || (allowEmpty ? '默认 / 全局设置' : '请选择...') }}
@@ -291,13 +294,15 @@
                         :value="modelValue"
                         @input="handleCustomInput"
                         :placeholder="customPlaceholder"
-                        class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs focus:border-indigo-500 focus:outline-hidden focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                        class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs focus:border-indigo-500 focus-visible:outline-hidden focus-visible:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                        :aria-label="customPlaceholder"
                     />
                 </div>
                 <button
                     @click="switchToSelect"
                     class="flex-shrink-0 rounded-lg bg-gray-100 p-2 text-gray-500 transition-colors hover:bg-gray-200 hover:text-indigo-600 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600 dark:hover:text-indigo-400"
-                    title="返回列表选择"
+                    :title="t('operators.backToList')"
+                    :aria-label="t('operators.backToList')"
                 >
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path
@@ -336,10 +341,12 @@
             >
                 <span>
                     <span class="font-medium text-gray-700 dark:text-gray-200">模板变量说明</span>
-                    <span class="ml-2 text-[11px] text-gray-400">{{ helperText }}</span>
+                    <span class="ml-2 text-[11px] text-gray-500 dark:text-gray-400">{{
+                        helperText
+                    }}</span>
                 </span>
                 <svg
-                    class="h-4 w-4 flex-shrink-0 text-gray-400 transition-transform"
+                    class="h-4 w-4 flex-shrink-0 text-gray-500 dark:text-gray-400 transition-transform"
                     :class="showTemplateVariables ? 'rotate-180' : ''"
                     fill="none"
                     stroke="currentColor"

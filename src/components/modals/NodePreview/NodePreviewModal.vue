@@ -116,12 +116,12 @@
             addNodesFromBulk(nodesToAdd);
 
             // Add nodes to the manual list. Profile association remains an explicit follow-up action.
-            showToast(`已成功提取 ${urls.length} 个节点至手动列表，请记得保存更改。`, 'success');
+            showToast(t('nodePreview.extractedToManual', { count: urls.length }), 'success');
 
             pickingMode.value = false;
             selectedUrls.value.clear();
         } catch (err) {
-            showToast('保存选择失败: ' + err.message, 'error');
+            showToast(t('nodePreview.saveSelectionFailed', { message: err.message }), 'error');
         }
     };
 
@@ -130,7 +130,7 @@
         if (props.profileName) {
             return props.profileName;
         }
-        return props.subscriptionName || '未知订阅';
+        return props.subscriptionName || t('nodePreview.unknownSubscription');
     });
 
     const subtitle = computed(() => {
@@ -260,7 +260,7 @@
             } else if (props.subscriptionUrl) {
                 requestData.url = props.subscriptionUrl;
             } else {
-                throw new Error('缺少必要的参数');
+                throw new Error(t('nodePreview.missingParams'));
             }
 
             if (isDev) {
@@ -273,7 +273,7 @@
             }
 
             if (!data.success) {
-                throw new Error(data.error || '获取节点失败');
+                throw new Error(data.error || t('nodePreview.fetchFailed'));
             }
 
             allNodes.value = data.nodes || [];
@@ -549,7 +549,7 @@
                         </h3>
                     </div>
                     <p
-                        class="text-[11px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-widest pl-3.5"
+                        class="text-[11px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-widest pl-3.5"
                     >
                         {{ subtitle }}
                     </p>
@@ -571,7 +571,8 @@
                     </button>
                     <button
                         @click="closeModal"
-                        class="p-2.5 rounded-xl bg-gray-100 dark:bg-gray-700/50 text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all"
+                        class="p-2.5 rounded-xl bg-gray-100 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all"
+                        :aria-label="t('common.close')"
                     >
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path
@@ -617,7 +618,7 @@
                             </div>
                             <div>
                                 <div
-                                    class="text-xs font-bold text-gray-400 uppercase tracking-tighter dark:text-gray-500"
+                                    class="text-xs font-bold text-gray-500 uppercase tracking-tighter dark:text-gray-400"
                                 >
                                     Nodes Total
                                 </div>
@@ -654,7 +655,7 @@
                             </div>
                             <div>
                                 <div
-                                    class="text-xs font-bold text-gray-400 uppercase tracking-tighter dark:text-gray-500"
+                                    class="text-xs font-bold text-gray-500 uppercase tracking-tighter dark:text-gray-400"
                                 >
                                     Protocols
                                 </div>
@@ -691,7 +692,7 @@
                             </div>
                             <div>
                                 <div
-                                    class="text-xs font-bold text-gray-400 uppercase tracking-tighter dark:text-gray-500"
+                                    class="text-xs font-bold text-gray-500 uppercase tracking-tighter dark:text-gray-400"
                                 >
                                     Regions
                                 </div>
@@ -728,7 +729,7 @@
                             </div>
                             <div>
                                 <div
-                                    class="text-xs font-bold text-gray-400 uppercase tracking-tighter dark:text-gray-500"
+                                    class="text-xs font-bold text-gray-500 uppercase tracking-tighter dark:text-gray-400"
                                 >
                                     Total Pages
                                 </div>
@@ -848,7 +849,7 @@
                             class="rounded-xl border border-dashed border-gray-300 bg-white/70 px-8 py-8 text-center dark:border-gray-700 dark:bg-gray-900/50"
                         >
                             <svg
-                                class="mx-auto h-12 w-12 text-gray-400"
+                                class="mx-auto h-12 w-12 text-gray-500 dark:text-gray-400"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"

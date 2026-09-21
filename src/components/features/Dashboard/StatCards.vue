@@ -65,7 +65,7 @@
     });
 
     const cardBaseClass =
-        'stat-card group w-full text-left bg-white/90 dark:bg-gray-900/70 p-4 misub-radius-lg shadow-sm border transition-all duration-500 hover:-translate-y-0.5 hover:shadow-md focus:outline-hidden focus:ring-2 focus:ring-primary-500/30';
+        'stat-card group w-full text-left bg-white/90 dark:bg-gray-900/70 p-4 misub-radius-lg shadow-sm border transition-all duration-500 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-500/30';
     const normalCardClass = 'border-gray-100/80 dark:border-white/10';
     const warningCardClass =
         'border-amber-200/80 bg-amber-50/70 dark:border-amber-400/20 dark:bg-amber-500/10';
@@ -144,7 +144,11 @@
             </div>
             <p
                 class="text-xs mt-1"
-                :class="hasTrafficWarning ? 'text-amber-700 dark:text-amber-300' : 'text-gray-400'"
+                :class="
+                    hasTrafficWarning
+                        ? 'text-amber-700 dark:text-amber-300'
+                        : 'text-gray-500 dark:text-gray-400'
+                "
             >
                 {{
                     hasTrafficWarning
@@ -281,7 +285,11 @@
             </p>
             <p
                 class="text-xs mt-2"
-                :class="hasNodeWarning ? 'text-amber-700 dark:text-amber-300' : 'text-gray-400'"
+                :class="
+                    hasNodeWarning
+                        ? 'text-amber-700 dark:text-amber-300'
+                        : 'text-gray-500 dark:text-gray-400'
+                "
             >
                 {{
                     hasNodeWarning
@@ -339,7 +347,11 @@
             </p>
             <p
                 class="text-xs mt-2"
-                :class="hasProfileWarning ? 'text-amber-700 dark:text-amber-300' : 'text-gray-400'"
+                :class="
+                    hasProfileWarning
+                        ? 'text-amber-700 dark:text-amber-300'
+                        : 'text-gray-500 dark:text-gray-400'
+                "
             >
                 {{
                     hasProfileWarning

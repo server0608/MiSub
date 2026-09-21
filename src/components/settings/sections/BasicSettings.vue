@@ -215,7 +215,7 @@
             <div class="max-w-xs">
                 <select
                     v-model="settings.defaultLocale"
-                    class="block w-full px-3 py-2.5 bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 misub-radius-lg shadow-sm focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 sm:text-sm dark:text-white transition-colors"
+                    class="block w-full px-3 py-2.5 bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 misub-radius-lg shadow-sm focus-visible:ring-2 focus-visible:ring-amber-500/40 focus:border-amber-500 sm:text-sm dark:text-white transition-colors"
                 >
                     <option value="zh-CN">{{ t('settings.defaultLanguageZh') }}</option>
                     <option value="en-US">{{ t('settings.defaultLanguageEn') }}</option>
@@ -345,13 +345,14 @@
                                 "
                                 :placeholder="t('settings.customInterval')"
                                 min="5"
-                                class="w-24 px-2.5 py-2 text-sm bg-white/70 dark:bg-black/20 border border-gray-200/80 dark:border-white/10 misub-radius-md text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500/40 focus:border-primary-500 outline-none transition-all"
+                                class="w-24 px-2.5 py-2 text-sm bg-white/70 dark:bg-black/20 border border-gray-200/80 dark:border-white/10 misub-radius-md text-gray-900 dark:text-white placeholder-gray-400 focus-visible:ring-2 focus-visible:ring-primary-500/40 focus:border-primary-500 outline-none transition-all"
+                                :aria-label="t('settings.autoUpdateInterval')"
                             />
                             <span class="text-xs text-gray-500 dark:text-gray-400">{{
                                 t('settings.minutes')
                             }}</span>
                         </div>
-                        <span class="text-xs text-gray-400 dark:text-gray-500 self-center">{{
+                        <span class="text-xs text-gray-500 dark:text-gray-400 self-center">{{
                             t('settings.quickSelect')
                         }}</span>
                         <button
@@ -413,7 +414,7 @@
                     </div>
                     <select
                         v-model="settings.accessLogPersistenceMode"
-                        class="block w-full px-3 py-2 bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 misub-radius-lg shadow-sm focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 sm:text-sm dark:text-white transition-colors"
+                        class="block w-full px-3 py-2 bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 misub-radius-lg shadow-sm focus-visible:ring-2 focus-visible:ring-indigo-500/40 focus:border-indigo-500 sm:text-sm dark:text-white transition-colors"
                     >
                         <option value="light">{{ t('settings.accessLogLight') }}</option>
                         <option value="full">{{ t('settings.accessLogFull') }}</option>
@@ -449,7 +450,7 @@
                     </div>
                     <select
                         v-model="settings.mergeExpireStrategy"
-                        class="block w-full px-3 py-2 bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 misub-radius-lg shadow-sm focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 sm:text-sm dark:text-white transition-colors"
+                        class="block w-full px-3 py-2 bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 misub-radius-lg shadow-sm focus-visible:ring-2 focus-visible:ring-indigo-500/40 focus:border-indigo-500 sm:text-sm dark:text-white transition-colors"
                     >
                         <option value="max">{{ t('settings.mergeExpireMax') }}</option>
                         <option value="min">{{ t('settings.mergeExpireMin') }}</option>
@@ -571,7 +572,7 @@
                                         type="radio"
                                         value="default"
                                         v-model="disguiseConfig.pageType"
-                                        class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 dark:bg-gray-800"
+                                        class="h-4 w-4 text-indigo-600 focus-visible:ring-indigo-500 border-gray-300 dark:border-gray-600 dark:bg-gray-800"
                                     />
                                     <div class="ml-3">
                                         <span
@@ -588,7 +589,7 @@
                                         type="radio"
                                         value="redirect"
                                         v-model="disguiseConfig.pageType"
-                                        class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 dark:bg-gray-800"
+                                        class="h-4 w-4 text-indigo-600 focus-visible:ring-indigo-500 border-gray-300 dark:border-gray-600 dark:bg-gray-800"
                                     />
                                     <div class="ml-3">
                                         <span

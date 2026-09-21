@@ -145,10 +145,11 @@
                         type="text"
                         v-model="searchModel"
                         :placeholder="t('manualNodes.searchPlaceholder')"
-                        class="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm shadow-xs focus:border-indigo-500 focus:outline-hidden focus:ring-1 focus:ring-indigo-500 dark:border-white/10 dark:bg-white/5"
+                        class="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm shadow-xs focus:border-indigo-500 focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-indigo-500 dark:border-white/10 dark:bg-white/5"
+                        :aria-label="t('manualNodes.searchLabel')"
                     />
                     <svg
-                        class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400"
+                        class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400"
                         xmlns="http://www.w3.org/2000/svg"
                         fill="none"
                         viewBox="0 0 24 24"
@@ -167,12 +168,13 @@
                 >
                     <button
                         @click="emit('update:viewMode', 'card')"
-                        class="view-mode-toggle p-1.5 misub-radius-sm transition-colors flex items-center justify-center"
+                        class="view-mode-toggle p-1.5 misub-radius-sm transition-colors flex items-center justify-center touch-target"
                         :class="
                             viewMode === 'card'
                                 ? 'bg-white dark:bg-gray-900 text-indigo-600'
                                 : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white'
                         "
+                        :aria-label="t('common.cardView')"
                     >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -187,12 +189,13 @@
                     </button>
                     <button
                         @click="emit('update:viewMode', 'list')"
-                        class="view-mode-toggle p-1.5 misub-radius-sm transition-colors flex items-center justify-center"
+                        class="view-mode-toggle p-1.5 misub-radius-sm transition-colors flex items-center justify-center touch-target"
                         :class="
                             viewMode === 'list'
                                 ? 'bg-white dark:bg-gray-900 text-indigo-600'
                                 : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white'
                         "
+                        :aria-label="t('common.listView')"
                     >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"

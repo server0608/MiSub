@@ -311,7 +311,7 @@
             </div>
             <div v-if="searchable" class="relative mt-4">
                 <svg
-                    class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+                    class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500 dark:text-gray-400"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -328,11 +328,11 @@
                     :placeholder="t('subscriptions.listSearchPlaceholder')"
                     :aria-label="t('subscriptions.searchPlaceholder')"
                     :disabled="isSorting"
-                    class="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-20 text-sm text-gray-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-gray-500"
+                    class="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-20 text-sm text-gray-900 outline-none transition focus:border-primary-500 focus-visible:ring-2 focus-visible:ring-primary-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-gray-500"
                 />
                 <span
                     v-if="searchQuery"
-                    class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400"
+                    class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500 dark:text-gray-400"
                 >
                     {{ visibleCount }}/{{ subscriptions.length }}
                 </span>
@@ -396,7 +396,7 @@
                                     @click="toggleGroup(group.key)"
                                 >
                                     <svg
-                                        class="h-4 w-4 shrink-0 text-gray-400 transition-transform"
+                                        class="h-4 w-4 shrink-0 text-gray-500 dark:text-gray-400 transition-transform"
                                         :class="isGroupCollapsed(group.key) ? '-rotate-90' : ''"
                                         viewBox="0 0 20 20"
                                         fill="currentColor"
@@ -434,7 +434,7 @@
                                     >
                                         {{ t('subscriptions.renameGroup') }}
                                     </button>
-                                    <span class="text-xs text-gray-400">
+                                    <span class="text-xs text-gray-500 dark:text-gray-400">
                                         {{
                                             isGroupCollapsed(group.key)
                                                 ? t('subscriptions.expand')
@@ -558,14 +558,14 @@
                 <button
                     data-testid="empty-add-subscription"
                     @click="handleAdd"
-                    class="inline-flex items-center justify-center rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500/30"
+                    class="inline-flex items-center justify-center rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30"
                 >
                     {{ t('subscriptions.addEmpty') }}
                 </button>
                 <button
                     data-testid="empty-import-subscriptions"
                     @click="handleImport"
-                    class="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500/30 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10"
+                    class="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10"
                 >
                     {{ t('actions.bulkImport') }}
                 </button>

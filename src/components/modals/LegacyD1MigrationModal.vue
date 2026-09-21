@@ -73,7 +73,7 @@
     const getLogClass = (type) => {
         if (type === 'success') return 'text-green-400';
         if (type === 'error') return 'text-red-400';
-        return 'text-gray-300';
+        return 'text-gray-500 dark:text-gray-400';
     };
 </script>
 

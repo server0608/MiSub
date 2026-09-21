@@ -165,8 +165,9 @@
                         <div v-if="!isSelectionMode" class="flex shrink-0 items-center gap-0.5">
                             <button
                                 @click.stop="emit('ping')"
-                                class="rounded-md p-2 text-gray-400 transition-colors hover:bg-green-500/10 hover:text-green-500"
+                                class="rounded-md p-2 text-gray-500 dark:text-gray-400 transition-colors hover:bg-green-500/10 hover:text-green-500"
                                 :title="t('actions.ping')"
+                                :aria-label="t('actions.ping')"
                                 :disabled="isPinging"
                                 :class="{ 'animate-pulse text-green-500': isPinging }"
                             >
@@ -187,8 +188,9 @@
                             </button>
                             <button
                                 @click.stop="copyToClipboard(node.url)"
-                                class="rounded-md p-2 text-gray-400 transition-colors hover:bg-primary-500/10 hover:text-primary-500"
+                                class="rounded-md p-2 text-gray-500 dark:text-gray-400 transition-colors hover:bg-primary-500/10 hover:text-primary-500"
                                 :title="t('actions.copyLink')"
+                                :aria-label="t('actions.copyLink')"
                             >
                                 <svg
                                     xmlns="http://www.w3.org/2000/svg"
@@ -207,8 +209,9 @@
                             </button>
                             <button
                                 @click.stop="emit('edit')"
-                                class="rounded-md p-2 text-gray-400 transition-colors hover:bg-gray-500/10 hover:text-gray-600 dark:hover:text-gray-200"
+                                class="rounded-md p-2 text-gray-500 dark:text-gray-400 transition-colors hover:bg-gray-500/10 hover:text-gray-600 dark:hover:text-gray-200"
                                 :title="t('actions.edit')"
+                                :aria-label="t('actions.edit')"
                             >
                                 <svg
                                     xmlns="http://www.w3.org/2000/svg"
@@ -227,8 +230,9 @@
                             </button>
                             <button
                                 @click.stop="emit('delete')"
-                                class="rounded-md p-2 text-gray-400 transition-colors hover:bg-red-500/10 hover:text-red-500"
+                                class="rounded-md p-2 text-gray-500 dark:text-gray-400 transition-colors hover:bg-red-500/10 hover:text-red-500"
                                 :title="t('actions.delete')"
+                                :aria-label="t('actions.delete')"
                             >
                                 <svg
                                     xmlns="http://www.w3.org/2000/svg"
@@ -355,7 +359,7 @@
             >
                 {{ node.group }}
             </div>
-            <div v-else class="text-[10px] text-gray-300 dark:text-gray-600">-</div>
+            <div v-else class="text-[10px] text-gray-500 dark:text-gray-400">-</div>
 
             <div
                 class="inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold"
@@ -435,8 +439,9 @@
             >
                 <button
                     @click.stop="emit('ping')"
-                    class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md p-2 text-gray-400 transition-colors hover:bg-green-500/10 hover:text-green-500 lg:min-h-0 lg:min-w-0"
+                    class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md p-2 text-gray-500 dark:text-gray-400 transition-colors hover:bg-green-500/10 hover:text-green-500 lg:min-h-0 lg:min-w-0"
                     :title="t('actions.ping')"
+                    :aria-label="t('actions.ping')"
                     :disabled="isPinging"
                     :class="{ 'animate-pulse text-green-500': isPinging }"
                 >
@@ -457,8 +462,9 @@
                 </button>
                 <button
                     @click.stop="copyToClipboard(node.url)"
-                    class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md p-2 text-gray-400 transition-colors hover:bg-primary-500/10 hover:text-primary-500 lg:min-h-0 lg:min-w-0"
+                    class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md p-2 text-gray-500 dark:text-gray-400 transition-colors hover:bg-primary-500/10 hover:text-primary-500 lg:min-h-0 lg:min-w-0"
                     :title="t('actions.copyLink')"
+                    :aria-label="t('actions.copyLink')"
                 >
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -477,8 +483,9 @@
                 </button>
                 <button
                     @click.stop="emit('edit')"
-                    class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md p-2 text-gray-400 transition-colors hover:bg-gray-500/10 hover:text-gray-600 dark:hover:text-gray-200 lg:min-h-0 lg:min-w-0"
+                    class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md p-2 text-gray-500 dark:text-gray-400 transition-colors hover:bg-gray-500/10 hover:text-gray-600 dark:hover:text-gray-200 lg:min-h-0 lg:min-w-0"
                     :title="t('actions.edit')"
+                    :aria-label="t('actions.edit')"
                 >
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -497,8 +504,9 @@
                 </button>
                 <button
                     @click.stop="emit('delete')"
-                    class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md p-2 text-gray-400 transition-colors hover:bg-red-500/10 hover:text-red-500 lg:min-h-0 lg:min-w-0"
+                    class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md p-2 text-gray-500 dark:text-gray-400 transition-colors hover:bg-red-500/10 hover:text-red-500 lg:min-h-0 lg:min-w-0"
                     :title="t('actions.delete')"
+                    :aria-label="t('actions.delete')"
                 >
                     <svg
                         xmlns="http://www.w3.org/2000/svg"

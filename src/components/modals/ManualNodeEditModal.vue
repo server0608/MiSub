@@ -391,6 +391,7 @@
                                 class="hidden"
                                 :accept="fileAccept"
                                 @change="onFilePicked"
+                                aria-hidden="true"
                             />
                             <button
                                 type="button"
@@ -432,7 +433,7 @@
 
                         <div class="flex h-full">
                             <div
-                                class="py-3 pl-3 flex items-start text-gray-400 group-focus-within:text-primary-500 transition-colors pointer-events-none"
+                                class="py-3 pl-3 flex items-start text-gray-500 dark:text-gray-400 group-focus-within:text-primary-500 transition-colors pointer-events-none"
                             >
                                 <svg
                                     xmlns="http://www.w3.org/2000/svg"
@@ -456,7 +457,7 @@
                                 @focus="urlFocused = true"
                                 @blur="urlFocused = false"
                                 @input="$emit('input-url', $event)"
-                                class="flex-1 w-full bg-transparent border-0 focus:ring-0 dark:text-white placeholder-gray-400 text-sm font-mono resize-none py-3 pl-3 pr-20 min-h-[160px]"
+                                class="flex-1 w-full bg-transparent border-0 focus-visible:ring-0 dark:text-white placeholder-gray-400 text-sm font-mono resize-none py-3 pl-3 pr-20 min-h-[160px]"
                                 :placeholder="t('manualNodes.urlPlaceholder')"
                             ></textarea>
                         </div>
@@ -501,7 +502,9 @@
                             :key="idx"
                             class="flex items-center gap-3 px-3 py-2 border-b border-gray-100 dark:border-gray-700/50 last:border-b-0"
                         >
-                            <span class="text-xs text-gray-400 w-5 text-right">{{ idx + 1 }}</span>
+                            <span class="text-xs text-gray-500 dark:text-gray-400 w-5 text-right">{{
+                                idx + 1
+                            }}</span>
                             <span
                                 v-if="node.protocol"
                                 class="text-xs font-bold px-1.5 py-0.5 rounded shrink-0"
@@ -511,7 +514,7 @@
                             </span>
                             <span
                                 v-else
-                                class="text-xs text-gray-400 px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 shrink-0"
+                                class="text-xs text-gray-500 dark:text-gray-400 px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 shrink-0"
                             >
                                 {{ t('manualNodes.unknownProtocol') }}
                             </span>

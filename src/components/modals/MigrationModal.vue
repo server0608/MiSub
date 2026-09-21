@@ -101,7 +101,7 @@
             case 'warning':
                 return 'text-yellow-400';
             default:
-                return 'text-gray-300';
+                return 'text-gray-500 dark:text-gray-400';
         }
     };
 
@@ -184,6 +184,7 @@ CREATE INDEX IF NOT EXISTS idx_settings_updated_at ON settings(updated_at);`;
                                     checked
                                     disabled
                                     class="mt-1 h-4 w-4 text-indigo-600 rounded border-gray-300"
+                                    aria-hidden="true"
                                 />
                                 <span>在 Cloudflare 后台创建 D1 数据库</span>
                             </li>
@@ -193,6 +194,7 @@ CREATE INDEX IF NOT EXISTS idx_settings_updated_at ON settings(updated_at);`;
                                     checked
                                     disabled
                                     class="mt-1 h-4 w-4 text-indigo-600 rounded border-gray-300"
+                                    aria-hidden="true"
                                 />
                                 <span
                                     >在 Pages 设置中绑定 D1 数据库变量为 <code>MISUB_DB</code></span
@@ -201,7 +203,8 @@ CREATE INDEX IF NOT EXISTS idx_settings_updated_at ON settings(updated_at);`;
                             <li class="flex items-start gap-2">
                                 <input
                                     type="checkbox"
-                                    class="mt-1 h-4 w-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
+                                    class="mt-1 h-4 w-4 text-indigo-600 rounded border-gray-300 focus-visible:ring-indigo-500"
+                                    aria-hidden="true"
                                 />
                                 <div class="flex flex-col gap-1">
                                     <span class="font-medium text-orange-600 dark:text-orange-400"

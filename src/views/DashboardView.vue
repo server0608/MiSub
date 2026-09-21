@@ -253,7 +253,7 @@
                             class="mt-2 text-sm font-medium text-gray-600 dark:text-gray-400 flex flex-wrap items-center gap-x-2 gap-y-1"
                         >
                             <span>{{ t('dashboard.subtitle') }}</span>
-                            <span class="hidden sm:inline text-gray-400 dark:text-gray-500">|</span>
+                            <span class="hidden sm:inline text-gray-500 dark:text-gray-400">|</span>
                             <span class="w-full sm:w-auto text-xs sm:text-sm"
                                 >{{ t('dashboard.lastUpdate') }}: {{ lastUpdatedTime }}</span
                             >

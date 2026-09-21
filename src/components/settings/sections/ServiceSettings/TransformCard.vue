@@ -236,7 +236,7 @@
                         </label>
                         <select
                             v-model="settings.transformConfigMode"
-                            class="block w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm transition-colors duration-200 focus:border-purple-500 focus:ring-purple-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                            class="block w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm transition-colors duration-200 focus:border-purple-500 focus-visible:ring-purple-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
                         >
                             <option
                                 v-for="option in modeOptions"
@@ -251,7 +251,9 @@
                                 {{ option.label }}
                             </option>
                         </select>
-                        <p class="mt-2 text-[10px] leading-relaxed text-gray-400">
+                        <p
+                            class="mt-2 text-[10px] leading-relaxed text-gray-500 dark:text-gray-400"
+                        >
                             {{ modeHint }}
                         </p>
                         <p
@@ -280,7 +282,9 @@
                                 ></span>
                                 {{ t('settings.transformBuiltinParams') }}
                             </h4>
-                            <span class="text-[10px] font-medium text-gray-400">builtin-core</span>
+                            <span class="text-[10px] font-medium text-gray-500 dark:text-gray-400"
+                                >builtin-core</span
+                            >
                         </div>
 
                         <div class="space-y-4">
@@ -294,7 +298,7 @@
                                 <select
                                     v-model="settings.ruleLevel"
                                     :disabled="!isBuiltinMode || isExternalEngine"
-                                    class="block w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-900 focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                                    class="block w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-900 focus:border-indigo-500 focus-visible:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
                                 >
                                     <option value="base">
                                         {{ t('settings.transformRuleBase') }}
@@ -383,7 +387,9 @@
                     ></span>
                     {{ t('settings.transformExternalParams') }}
                 </h4>
-                <span class="text-[10px] font-medium text-gray-400">subconverter</span>
+                <span class="text-[10px] font-medium text-gray-500 dark:text-gray-400"
+                    >subconverter</span
+                >
             </div>
 
             <div class="space-y-4">
@@ -393,7 +399,7 @@
                     }}</label>
                     <select
                         v-model="settings.subconverter.defaultBackend"
-                        class="mb-2 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-900 focus:border-orange-500 focus:ring-orange-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                        class="mb-2 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-900 focus:border-orange-500 focus-visible:ring-orange-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
                     >
                         <option
                             v-for="backend in SUBCONVERTER_BACKENDS"
@@ -407,9 +413,10 @@
                         type="text"
                         v-model="settings.subconverter.defaultBackend"
                         placeholder="subapi.cmliussss.net"
-                        class="block w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-900 focus:border-orange-500 focus:ring-orange-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                        class="block w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-900 focus:border-orange-500 focus-visible:ring-orange-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                        :aria-label="t('settings.transformCustomBackend')"
                     />
-                    <p class="mt-1.5 text-[10px] leading-relaxed text-gray-400">
+                    <p class="mt-1.5 text-[10px] leading-relaxed text-gray-500 dark:text-gray-400">
                         {{ t('settings.transformBackendHint') }}
                     </p>
                     <div class="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -426,7 +433,7 @@
                                     : t('settings.transformTestBackend')
                             }}
                         </button>
-                        <p class="text-[10px] leading-relaxed text-gray-400">
+                        <p class="text-[10px] leading-relaxed text-gray-500 dark:text-gray-400">
                             {{ t('settings.transformTestBackendHint') }}
                         </p>
                     </div>

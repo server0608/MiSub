@@ -1,4 +1,7 @@
 ﻿<script setup>
+    import { useI18n } from '../../i18n/index.js';
+
+    const { t } = useI18n();
     import { ref, onMounted, computed } from 'vue';
     import MigrationModal from './MigrationModal.vue';
     import { useSettingsLogic } from '../../composables/useSettingsLogic.js';
@@ -36,19 +39,19 @@
     const currentTabLabel = computed(() => {
         switch (activeTab.value) {
             case 'basic':
-                return '基础设置';
+                return t('settings.tabs.basic');
             case 'home':
-                return '首页设置';
+                return t('settings.tabs.home');
             case 'global':
-                return '全局设置';
+                return t('settings.tabs.global');
             case 'service':
-                return '服务集成';
+                return t('settings.tabs.service');
             case 'client':
-                return '客户端管理';
+                return t('settings.tabs.client');
             case 'system':
-                return '系统设置';
+                return t('settings.tabs.system');
             default:
-                return '设置';
+                return t('settings.title');
         }
     });
 
@@ -75,14 +78,16 @@
             </template>
 
             <div v-if="isLoading" class="text-center p-8">
-                <p class="text-gray-500">正在加载设置...</p>
+                <p class="text-gray-500">{{ t('settings.loading') }}</p>
             </div>
             <div v-else class="space-y-6 max-w-6xl w-full mx-auto pt-2">
                 <div
                     class="flex flex-wrap items-center justify-between gap-3 p-4 bg-white/70 dark:bg-gray-900/60 border border-gray-100/80 dark:border-white/10 misub-radius-lg shadow-sm"
                 >
                     <div>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">当前模块</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            {{ t('settings.currentModule') }}
+                        </p>
                         <p class="text-lg font-semibold text-gray-900 dark:text-white">
                             {{ currentTabLabel }}
                         </p>
@@ -90,7 +95,7 @@
                     <div
                         class="text-xs text-gray-500 dark:text-gray-400 bg-white/70 dark:bg-white/5 border border-gray-200/60 dark:border-white/10 px-3 py-1.5 misub-radius-pill"
                     >
-                        修改后记得点击右下角保存
+                        {{ t('settings.saveHint') }}
                     </div>
                 </div>
                 <BasicSettings
@@ -145,7 +150,7 @@
                             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                         ></path>
                     </svg>
-                    <span>{{ isSaving ? '保存中...' : '保存修改' }}</span>
+                    <span>{{ isSaving ? t('settings.saving') : t('settings.saveChanges') }}</span>
                 </button>
             </template>
         </SettingsLayout>

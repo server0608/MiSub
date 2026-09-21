@@ -677,7 +677,7 @@
                                     class="mt-6 flex items-center justify-between pt-4 border-t border-gray-50 dark:border-white/5"
                                 >
                                     <span
-                                        class="text-xs text-gray-400 bg-gray-50 dark:bg-white/5 px-2 py-1 misub-radius-md"
+                                        class="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-white/5 px-2 py-1 misub-radius-md"
                                     >
                                         {{ getClientVersionLabel(client) }}
                                     </span>

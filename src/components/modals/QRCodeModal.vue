@@ -1,4 +1,7 @@
 <script setup>
+    import { useI18n } from '../../i18n/index.js';
+
+    const { t } = useI18n();
     import { ref, watch, nextTick } from 'vue';
     import QRCode from 'qrcode';
     import Modal from '../forms/Modal.vue';
@@ -93,7 +96,7 @@
                             d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
                         />
                     </svg>
-                    保存二维码图片
+                    {{ t('qr.saveImage') }}
                 </button>
             </div>
         </template>
