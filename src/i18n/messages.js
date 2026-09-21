@@ -361,6 +361,8 @@ export const messages = {
             clearedCount: '已清空 {count} 个订阅',
             batchUpdating: '正在批量更新 {count} 个订阅...',
             bulkImportUpdateDone: '批量导入并更新完成！',
+            bulkUpdatePartial: '批量更新结束，{failed}/{total} 个订阅更新失败',
+            openEditFailed: '打开编辑窗口失败，请重试',
             bulkImportDone: '批量导入完成！',
             importedCount: '成功导入 {count} 个订阅',
             noRefreshableSubscriptions: '没有可刷新的订阅',
@@ -657,6 +659,7 @@ export const messages = {
             appStoreVersion: 'App Store 版',
             stableVersion: '稳定版',
             qrDownloaded: '二维码已下载',
+            qrGenerateFailed: '二维码生成失败，请重试',
             loadFailed: '加载失败',
             retry: '重试',
             clientsEyebrow: '必备工具',
@@ -1167,6 +1170,11 @@ export const messages = {
                 client: '客户端管理',
                 system: '系统设置',
             },
+            groups: {
+                site: '站点展示',
+                data: '数据与集成',
+                maintenance: '系统维护',
+            },
         },
         operators: {
             filter: '过滤节点',
@@ -1344,7 +1352,9 @@ export const messages = {
             submitting: '提交中...',
         },
         qr: {
+            title: '二维码',
             saveImage: '保存二维码图片',
+            generateFailed: '二维码生成失败，请重试',
         },
         pagination: {
             showingRange: '显示第 {from} - {to} 项，共 {total} 项',
@@ -1981,6 +1991,8 @@ export const messages = {
             clearedCount: 'Cleared {count} sources',
             batchUpdating: 'Updating {count} sources...',
             bulkImportUpdateDone: 'Import and update done',
+            bulkUpdatePartial: 'Batch update finished; {failed}/{total} sources failed',
+            openEditFailed: 'Failed to open the edit dialog; please retry',
             bulkImportDone: 'Import done',
             importedCount: 'Imported {count} sources',
             noRefreshableSubscriptions: 'No sources to refresh',
@@ -2289,6 +2301,7 @@ export const messages = {
             appStoreVersion: 'App Store',
             stableVersion: 'Stable',
             qrDownloaded: 'QR saved',
+            qrGenerateFailed: 'Failed to generate QR code; please retry',
             loadFailed: 'Load failed',
             retry: 'Retry',
             clientsEyebrow: 'Tools',
@@ -2828,6 +2841,11 @@ export const messages = {
                 client: 'Clients',
                 system: 'System',
             },
+            groups: {
+                site: 'Site Content',
+                data: 'Data & Integrations',
+                maintenance: 'Maintenance',
+            },
         },
         operators: {
             filter: 'Filter nodes',
@@ -3016,7 +3034,9 @@ export const messages = {
             submitting: 'Submitting...',
         },
         qr: {
+            title: 'QR Code',
             saveImage: 'Save QR code image',
+            generateFailed: 'Failed to generate QR code; please retry',
         },
         pagination: {
             showingRange: 'Showing {from}-{to} of {total}',

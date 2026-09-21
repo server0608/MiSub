@@ -89,9 +89,9 @@ export function useSubscriptions(markDirty) {
     async function handleUpdateNodeCount(subId, isInitialLoad = false) {
         // Find in the filtered list
         const subToUpdate = subscriptions.value.find((s) => s.id === subId);
-        if (!subToUpdate) return;
+        if (!subToUpdate) return false;
         // Double check URL just in case
-        if (!subToUpdate.url.startsWith('http')) return;
+        if (!subToUpdate.url.startsWith('http')) return false;
 
         if (!isInitialLoad) {
             subToUpdate.isUpdating = true;
@@ -175,7 +175,7 @@ export function useSubscriptions(markDirty) {
                         void dataStore.saveData();
                     }
                 }
-                return; // 开启保护性缓存节点时，失败保留旧值
+                return false; // 开启保护性缓存节点时，失败保留旧值
             }
 
             // 成功获取数据
@@ -195,6 +195,7 @@ export function useSubscriptions(markDirty) {
                 // 自动保存手动更新的结果
                 void dataStore.saveData();
             }
+            return true;
         } catch (error) {
             // 清除超时保护
             clearTimeout(timeoutId);
@@ -211,6 +212,7 @@ export function useSubscriptions(markDirty) {
             if (!isInitialLoad) {
                 showToast(errorMessage, 'error');
             }
+            return false;
         } finally {
             if (subToUpdate) subToUpdate.isUpdating = false;
         }
@@ -288,11 +290,23 @@ export function useSubscriptions(markDirty) {
             // This avoids 400 error because backend doesn't have these IDs yet.
             const updatePromises = subsToUpdate.map((sub) => handleUpdateNodeCount(sub.id));
 
-            try {
-                await Promise.allSettled(updatePromises);
+            // handleUpdateNodeCount 内部已逐个提示失败，自身不抛出，
+            // 所以 Promise.allSettled 恒为 fulfilled —— 原先包在这里的 try/catch 是死代码。
+            // 改为按返回值统计真实失败数，避免「有失败却提示全部完成」。
+            const results = await Promise.allSettled(updatePromises);
+            const failedCount = results.filter(
+                (result) => result.status === 'rejected' || result.value === false
+            ).length;
+            if (failedCount > 0) {
+                showToast(
+                    t('subscriptions.bulkUpdatePartial', {
+                        failed: failedCount,
+                        total: subsToUpdate.length,
+                    }),
+                    'warning'
+                );
+            } else {
                 showToast(t('subscriptions.bulkImportUpdateDone'), 'success');
-            } catch (e) {
-                console.error('Batch update finished with some errors');
             }
         } else {
             showToast(t('subscriptions.bulkImportDone'), 'success');
@@ -398,6 +412,8 @@ export function useSubscriptions(markDirty) {
                 await handleUpdateNodeCount(sub.id, true);
             }
         } catch (e) {
+            // 后台定时任务：handleUpdateNodeCount 内部已逐个提示失败，
+            // 且用户此刻可能不在页面上，这里只记日志，避免无意义的打扰。
             console.error('Auto update failed', e);
         }
     }
