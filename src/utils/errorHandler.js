@@ -4,6 +4,7 @@
  */
 
 import { t } from '../i18n/index.js';
+import { isChunkLoadError } from './chunk-reload.js';
 
 let toastHandler = null;
 let monitoringEndpoint = null;
@@ -192,6 +193,14 @@ class ErrorHandler {
             // 走到这里说明自动清缓存重载已经试过一次且仍然失败，
             // 所以提示「强制刷新」而不是普通刷新（普通刷新会命中同一份缓存）。
             return t('errors.resourceLoad', { fileName });
+        }
+        // 必须排在 network 判断之前：动态 chunk 加载失败的消息里含 "fetch"
+        // （Failed to fetch dynamically imported module），会被下面的 network 分支
+        // 误判成网络问题，让用户去检查网络 —— 而真实原因是发版后旧页面请求了
+        // 已删除的资源，检查网络永远解决不了。判定复用 chunk-reload 的谓词，
+        // 避免两处模式匹配漂移。
+        if (isChunkLoadError(message)) {
+            return t('errors.chunkLoadFailed');
         }
         if (message.includes('network') || message.includes('fetch')) {
             return t('errors.network');

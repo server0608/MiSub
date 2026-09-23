@@ -1455,6 +1455,7 @@ export const messages = {
             resourceLoadIntercepted:
                 '资源加载失败 ({fileName})。可能是浏览器隐私设置或扩展拦截了部分资源。',
             resourceLoad: '资源加载失败 ({fileName})，请尝试强制刷新页面（Ctrl/Cmd + Shift + R）',
+            chunkLoadFailed: '页面版本已更新，请刷新页面后重试',
             network: '网络连接失败，请检查网络',
             unauthorized: '认证失败，请重新登录',
             kvMissing: '服务端存储未初始化，请联系管理员配置 KV 绑定',
@@ -3158,6 +3159,7 @@ export const messages = {
                 'Failed to load a resource ({fileName}). Browser privacy settings or an extension may be blocking some resources.',
             resourceLoad:
                 'Failed to load a resource ({fileName}). Try a hard refresh (Ctrl/Cmd + Shift + R).',
+            chunkLoadFailed: 'The app has been updated. Please refresh the page and try again.',
             network: 'Network connection failed. Please check your connection.',
             unauthorized: 'Authentication failed. Please sign in again.',
             kvMissing:
