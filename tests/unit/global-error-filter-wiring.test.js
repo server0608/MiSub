@@ -58,8 +58,10 @@ describe('main.js 全局错误处理器接线', () => {
         // 或 404，这是有意的指纹防护（functions/[[path]].js 的 isBrandAsset 分支）。
         // 若把这类图片失败也当成致命错误，用户会看到「资源加载失败 (logo.png)」的误报，
         // 而刷新永远解决不了它。
-        expect(mainSource).toContain('const CRITICAL_ASSET_PATTERN = ');
-        expect(mainSource).toContain('const isCriticalAssetPath = (resourcePath) =>');
+        // 判定逻辑放在 utils（可被单测覆盖），main.js 只负责接线。
+        expect(mainSource).toMatch(
+            /import\s*\{[^}]*isCriticalAssetPath[^}]*\}\s*from\s*'\.\/utils\/url-origin\.js'/
+        );
         // 重载判定与上报判定共用同一个谓词，避免两处正则漂移。
         expect(mainSource).toContain('if (!isCriticalAssetPath(resourcePath)) return false;');
 

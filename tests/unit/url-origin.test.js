@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isLocalHost, isSameOriginUrl } from '../../src/utils/url-origin.js';
+import { isCriticalAssetPath, isLocalHost, isSameOriginUrl } from '../../src/utils/url-origin.js';
 
 describe('URL origin helpers', () => {
     const origin = 'https://example.com';
@@ -27,5 +27,34 @@ describe('URL origin helpers', () => {
 
     it('does not classify public hosts as local', () => {
         expect(isLocalHost('example.com')).toBe(false);
+    });
+
+    describe('isCriticalAssetPath', () => {
+        it('accepts bundled JS/CSS', () => {
+            expect(isCriticalAssetPath('/assets/index-DX_rRdMB.js')).toBe(true);
+            expect(isCriticalAssetPath('/assets/js/DashboardView-ClkcgaNI.js')).toBe(true);
+            expect(isCriticalAssetPath('/assets/main-Bd1Nq0.css')).toBe(true);
+            // 大小写不敏感，hash 后可能带查询串以外的扩展名写法
+            expect(isCriticalAssetPath('/assets/main.CSS')).toBe(true);
+        });
+
+        it('rejects non-critical resources', () => {
+            // 伪装开启时服务端会**有意**对未鉴权的品牌资源返回伪装页或 404，
+            // 这些失败不能当成致命错误（见 functions/[[path]].js 的 isBrandAsset 分支）。
+            expect(isCriticalAssetPath('/logo.png')).toBe(false);
+            expect(isCriticalAssetPath('/favicon.ico')).toBe(false);
+            expect(isCriticalAssetPath('/favicon.png')).toBe(false);
+            expect(isCriticalAssetPath('/assets/logo.png')).toBe(false);
+            expect(isCriticalAssetPath('/assets/font.woff2')).toBe(false);
+            expect(isCriticalAssetPath('/manifest.webmanifest')).toBe(false);
+            // 不在 assets/ 目录下的 JS 也不算打包产物
+            expect(isCriticalAssetPath('/sw.js')).toBe(false);
+        });
+
+        it('tolerates empty and malformed input', () => {
+            expect(isCriticalAssetPath('')).toBe(false);
+            expect(isCriticalAssetPath(undefined)).toBe(false);
+            expect(isCriticalAssetPath(null)).toBe(false);
+        });
     });
 });

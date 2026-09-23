@@ -8,7 +8,7 @@ import { isAppScriptError, isForeignRejection } from './utils/error-source.js';
 import { i18n } from './i18n/index.js';
 import { useToastStore } from './stores/toast.js';
 import { configureUnauthorizedHandler } from './lib/http.js';
-import { isLocalHost, isSameOriginUrl } from './utils/url-origin.js';
+import { isCriticalAssetPath, isLocalHost, isSameOriginUrl } from './utils/url-origin.js';
 
 // 全局错误处理
 if (typeof window !== 'undefined') {
@@ -63,12 +63,8 @@ if (typeof window !== 'undefined') {
     const localHost = isLocalHost(window.location.hostname);
     const isSameOriginResource = (resourceUrl) =>
         isSameOriginUrl(resourceUrl, currentOrigin, window.location.href);
-    // 只有打包产物里的 JS/CSS 失败才会影响应用运行，才值得「清缓存 + 重载」与错误上报。
-    // 图片、字体等非关键资源不在其中：伪装开启时服务端会**有意**对未鉴权的品牌资源
-    // （/logo.png、/favicon.*）返回伪装页或 404，那属于正常现象而非故障
-    // （见 functions/[[path]].js 的 isBrandAsset 分支）。
-    const CRITICAL_ASSET_PATTERN = /\/assets\/.+\.(js|css)$/i;
-    const isCriticalAssetPath = (resourcePath) => CRITICAL_ASSET_PATTERN.test(resourcePath || '');
+    // 只有打包产物里的 JS/CSS 失败才值得「清缓存重载」与错误上报，
+    // 判定逻辑见 utils/url-origin.js 的 isCriticalAssetPath。
     const hasAssetReloaded = () => {
         try {
             return sessionStorage.getItem(assetReloadKey) === '1';
