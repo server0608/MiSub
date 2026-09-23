@@ -19,21 +19,35 @@ function readAll() {
         const raw = localStorage.getItem(STORAGE_KEY);
         if (!raw) return [];
         const parsed = JSON.parse(raw);
-        if (!Array.isArray(parsed)) return [];
+        if (!Array.isArray(parsed)) {
+            // 被其它工具/旧版本写成对象或字符串时，这里只能退化为「无忽略记录」。
+            // 下一次写入会用合法的字符串数组覆盖它，从而自愈。
+            console.warn('[HealthItemDismissal] Ignoring non-array storage value');
+            return [];
+        }
         return parsed.filter((id) => typeof id === 'string' && id);
-    } catch {
+    } catch (error) {
+        console.warn('[HealthItemDismissal] Failed to read localStorage:', error);
         return [];
     }
 }
 
+/**
+ * 写入已忽略的 id 列表。
+ * @returns {boolean} 是否写入成功（隐私模式 / 存储被禁用 / 配额满时为 false）
+ */
 function writeAll(ids) {
     try {
-        if (typeof localStorage === 'undefined') return;
+        if (typeof localStorage === 'undefined') return false;
         // 控制体积：超出上限时丢弃最早写入的条目
         const trimmed = ids.slice(-MAX_ENTRIES);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
-    } catch {
-        /* 忽略写入失败（隐私模式等） */
+        return true;
+    } catch (error) {
+        // 隐私模式、站点存储被禁用、配额为 0 都会走到这里。
+        // 返回值让调用方可以提示用户，而不是「点了没反应」。
+        console.warn('[HealthItemDismissal] Failed to write localStorage:', error);
+        return false;
     }
 }
 
@@ -52,29 +66,41 @@ export function readDismissedHealthItemIds() {
     return readAll();
 }
 
-/** 忽略一个待处理项（重复忽略无副作用） */
+/**
+ * 忽略一个待处理项（重复忽略无副作用）。
+ * @returns {boolean} 该条目现在是否已被持久化忽略
+ */
 export function dismissHealthItem(id) {
     const key = String(id || '').trim();
-    if (!key) return;
+    if (!key) return false;
     const ids = readAll();
-    if (ids.includes(key)) return;
+    if (ids.includes(key)) return true;
     ids.push(key);
-    writeAll(ids);
+    return writeAll(ids);
 }
 
-/** 取消忽略（用于「全部恢复」） */
+/**
+ * 取消忽略（用于「全部恢复」）。
+ * @returns {boolean} 是否写入成功
+ */
 export function restoreHealthItem(id) {
     const key = String(id || '').trim();
-    if (!key) return;
-    writeAll(readAll().filter((entry) => entry !== key));
+    if (!key) return false;
+    return writeAll(readAll().filter((entry) => entry !== key));
 }
 
-/** 清空全部忽略记录（用于「全部恢复」） */
+/**
+ * 清空全部忽略记录（用于「全部恢复」）。
+ * @returns {boolean} 是否清除成功
+ */
 export function clearDismissedHealthItems() {
     try {
-        if (typeof localStorage !== 'undefined') localStorage.removeItem(STORAGE_KEY);
-    } catch {
-        /* ignore */
+        if (typeof localStorage === 'undefined') return false;
+        localStorage.removeItem(STORAGE_KEY);
+        return true;
+    } catch (error) {
+        console.warn('[HealthItemDismissal] Failed to clear localStorage:', error);
+        return false;
     }
 }
 

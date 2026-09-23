@@ -21,9 +21,11 @@
         resolveHealthItemCopy,
         shouldShowFullGuide,
     } from '../utils/dashboard-health.js';
+    import { useToastStore } from '../stores/toast.js';
     import { useI18n } from '../i18n/index.js';
 
     const { t } = useI18n();
+    const { showToast } = useToastStore();
 
     const dataStore = useDataStore();
     const { settings, profiles, isLoading, lastUpdated } = storeToRefs(dataStore);
@@ -197,14 +199,22 @@
     // --- Health item dismissal ---
     // Hiding an item only records a local preference; the underlying issue is
     // untouched, so it comes back if the user restores it.
+    // 忽略状态只存在 localStorage：隐私模式 / 站点存储被禁用时写入会失败，
+    // 必须明确告知用户，否则表现为「点了没反应」且没有任何提示。
     const dismissHealthItemById = (id) => {
-        dismissHealthItem(id);
+        const persisted = dismissHealthItem(id);
         dismissedHealthItemIds.value = readDismissedHealthItemIds();
+        if (!persisted) {
+            showToast(t('dashboard.health.dismissFailed'), 'error');
+        }
     };
 
     const restoreDismissedHealthItems = () => {
-        clearDismissedHealthItems();
+        const cleared = clearDismissedHealthItems();
         dismissedHealthItemIds.value = readDismissedHealthItemIds();
+        if (!cleared) {
+            showToast(t('dashboard.health.restoreFailed'), 'error');
+        }
     };
 
     // --- QRCode Modal Logic ---

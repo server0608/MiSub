@@ -36,8 +36,10 @@ vi.mock('../../src/composables/useManualNodes.js', () => ({
 }));
 import DashboardView from '../../src/views/DashboardView.vue';
 import { createI18n } from '../../src/i18n/index.js';
+import { messages } from '../../src/i18n/messages.js';
 import { useDataStore } from '../../src/stores/useDataStore.js';
 import { useSettingsStore } from '../../src/stores/settings.js';
+import { useToastStore } from '../../src/stores/toast.js';
 
 function mountDashboard(locale = 'zh-CN') {
     return mount(DashboardView, {
@@ -382,6 +384,34 @@ describe('DashboardView 待处理事项', () => {
 
         expect(second.vm.dashboardHealthItems.length).toBe(0);
         expect(second.vm.dismissedHealthItemsCount).toBe(1);
+    });
+
+    it('surfaces an error toast when the dismissal cannot be persisted', async () => {
+        subscriptionsRef.value = [buildSub({ id: 'failed', lastError: 'timeout' })];
+
+        const wrapper = mountDashboard();
+        await wrapper.vm.$nextTick();
+
+        // 模拟隐私模式 / 存储被禁用：写入直接抛错。
+        vi.stubGlobal('localStorage', {
+            getItem: () => null,
+            setItem: () => {
+                throw new Error('QuotaExceededError');
+            },
+            removeItem: () => {},
+        });
+
+        await wrapper.find('[data-testid="health-item-dismiss"]').trigger('click');
+
+        const { toasts } = useToastStore();
+        expect(toasts).toHaveLength(1);
+        expect(toasts[0].type).toBe('error');
+        expect(toasts[0].message).toBe(messages['zh-CN'].dashboard.health.dismissFailed);
+        // 写入失败时条目必须留在列表里，不能假装成功。
+        expect(wrapper.vm.dashboardHealthItems.map((i) => i.id)).toContain('subscription-errors');
+        expect(wrapper.vm.dismissedHealthItemsCount).toBe(0);
+
+        vi.unstubAllGlobals();
     });
 
     it('renders the dismissal copy in English without leaking keys', async () => {
