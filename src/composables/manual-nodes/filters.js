@@ -1,4 +1,5 @@
 import { NODE_PROTOCOL_REGEX } from '@/constants/nodeProtocols.js';
+import { DEFAULT_GROUP_KEY } from './groups.js';
 
 export const countryCodeMap = {
     hk: ['🇭🇰', '香港', 'HK'],
@@ -73,7 +74,7 @@ export function filterManualNodes(nodes, searchTerm, activeColorFilter) {
     let filtered = nodes;
 
     if (activeColorFilter) {
-        if (activeColorFilter === '默认') {
+        if (activeColorFilter === DEFAULT_GROUP_KEY) {
             filtered = filtered.filter((n) => !n.group);
         } else {
             filtered = filtered.filter((n) => n.group === activeColorFilter);

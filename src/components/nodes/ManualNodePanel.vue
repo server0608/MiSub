@@ -4,7 +4,10 @@
     import NodeActions from './ManualNodePanel/NodeActions.vue';
     import NodeTable from './ManualNodePanel/NodeTable.vue';
     import { useManualNodeSearchPagination } from '@/composables/manual-nodes/useManualNodeSearchPagination.js';
-    import { normalizeManualNodeGroupName } from '@/composables/manual-nodes/groups.js';
+    import {
+        normalizeManualNodeGroupName,
+        DEFAULT_GROUP_KEY,
+    } from '@/composables/manual-nodes/groups.js';
 
     const props = defineProps({
         manualNodes: { type: Array, default: () => [] },
@@ -118,7 +121,7 @@
 
         if (activeGroup) {
             const normalizedActiveGroup =
-                activeGroup === '默认' ? '' : normalizeManualNodeGroupName(activeGroup);
+                activeGroup === DEFAULT_GROUP_KEY ? '' : normalizeManualNodeGroupName(activeGroup);
             nodes = nodes.filter(
                 (node) => normalizeManualNodeGroupName(node.group) === normalizedActiveGroup
             );

@@ -2,6 +2,7 @@
     import { computed } from 'vue';
     import draggable from 'vuedraggable';
     import { useI18n } from '@/i18n/index.js';
+    import { DEFAULT_GROUP_KEY } from '@/composables/manual-nodes/groups.js';
 
     const { t } = useI18n();
 
@@ -96,10 +97,10 @@
                 {{ t('manualNodes.allGroups') }}
             </button>
             <button
-                @click="emit('update:groupFilter', t('manualNodes.defaultGroup'))"
+                @click="emit('update:groupFilter', DEFAULT_GROUP_KEY)"
                 class="px-2.5 py-1 text-xs font-medium rounded-full transition-all border shrink-0 whitespace-nowrap"
                 :class="
-                    activeGroupFilter === t('manualNodes.defaultGroup')
+                    activeGroupFilter === DEFAULT_GROUP_KEY
                         ? 'bg-indigo-100 text-indigo-700 border-indigo-200 dark:bg-indigo-900 dark:text-indigo-300 dark:border-indigo-700'
                         : 'bg-white text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600'
                 "
