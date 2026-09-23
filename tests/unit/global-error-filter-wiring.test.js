@@ -52,4 +52,26 @@ describe('main.js 全局错误处理器接线', () => {
         expect(branch).toMatch(/return;/);
         expect(branch.indexOf('return;')).toBeLessThan(branch.indexOf('handleError'));
     });
+
+    it('资源错误只在 JS/CSS 打包产物上才上报', () => {
+        // 背景：伪装开启时服务端会对未鉴权的品牌资源（/logo.png、/favicon.*）返回伪装页
+        // 或 404，这是有意的指纹防护（functions/[[path]].js 的 isBrandAsset 分支）。
+        // 若把这类图片失败也当成致命错误，用户会看到「资源加载失败 (logo.png)」的误报，
+        // 而刷新永远解决不了它。
+        expect(mainSource).toContain('const CRITICAL_ASSET_PATTERN = ');
+        expect(mainSource).toContain('const isCriticalAssetPath = (resourcePath) =>');
+        // 重载判定与上报判定共用同一个谓词，避免两处正则漂移。
+        expect(mainSource).toContain('if (!isCriticalAssetPath(resourcePath)) return false;');
+
+        const start = mainSource.indexOf('tryRecoverAssetLoad(resourceUrl).then');
+        expect(start).toBeGreaterThan(-1);
+        const reportAt = mainSource.indexOf('handleError(', start);
+        expect(reportAt).toBeGreaterThan(start);
+
+        const branch = mainSource.slice(start, reportAt);
+        const guardAt = branch.indexOf('if (!isCriticalAssetPath(resourcePath))');
+        expect(guardAt).toBeGreaterThan(-1);
+        // 非关键资源必须在 handleError 之前 return。
+        expect(branch.slice(guardAt)).toMatch(/return;/);
+    });
 });

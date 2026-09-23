@@ -10,6 +10,9 @@
     const isLoading = ref(false);
     const error = ref('');
     const showPassword = ref(false);
+    // 伪装开启时 /logo.png 对未鉴权请求会被服务端有意 404（指纹防护），
+    // 这里降级为内联图标，避免登录页出现「图片损坏」占位符。
+    const logoFailed = ref(false);
 
     const props = defineProps({
         login: Function,
@@ -43,12 +46,31 @@
                         class="w-full h-full flex items-center justify-center relative z-10 animate-float-slow"
                     >
                         <img
+                            v-if="!logoFailed"
                             width="96"
                             height="96"
                             src="/logo.png"
                             alt="MiSub"
                             class="drop-shadow-2xl"
+                            @error="logoFailed = true"
                         />
+                        <svg
+                            v-else
+                            width="96"
+                            height="96"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.5"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            class="text-primary-500 drop-shadow-2xl"
+                            aria-hidden="true"
+                        >
+                            <circle cx="12" cy="12" r="9" />
+                            <path d="M3.6 9h16.8M3.6 15h16.8" />
+                            <path d="M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18" />
+                        </svg>
                     </div>
                 </div>
 

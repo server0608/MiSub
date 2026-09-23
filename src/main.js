@@ -63,6 +63,12 @@ if (typeof window !== 'undefined') {
     const localHost = isLocalHost(window.location.hostname);
     const isSameOriginResource = (resourceUrl) =>
         isSameOriginUrl(resourceUrl, currentOrigin, window.location.href);
+    // 只有打包产物里的 JS/CSS 失败才会影响应用运行，才值得「清缓存 + 重载」与错误上报。
+    // 图片、字体等非关键资源不在其中：伪装开启时服务端会**有意**对未鉴权的品牌资源
+    // （/logo.png、/favicon.*）返回伪装页或 404，那属于正常现象而非故障
+    // （见 functions/[[path]].js 的 isBrandAsset 分支）。
+    const CRITICAL_ASSET_PATTERN = /\/assets\/.+\.(js|css)$/i;
+    const isCriticalAssetPath = (resourcePath) => CRITICAL_ASSET_PATTERN.test(resourcePath || '');
     const hasAssetReloaded = () => {
         try {
             return sessionStorage.getItem(assetReloadKey) === '1';
@@ -87,7 +93,7 @@ if (typeof window !== 'undefined') {
         } catch {
             return false;
         }
-        if (!/\/assets\/.+\.(js|css)$/i.test(resourcePath)) return false;
+        if (!isCriticalAssetPath(resourcePath)) return false;
         if (hasAssetReloaded()) return false;
 
         markAssetReloaded();
@@ -143,7 +149,25 @@ if (typeof window !== 'undefined') {
 
                 tryRecoverAssetLoad(resourceUrl).then((recovered) => {
                     if (recovered) return;
-                    if (localHost && /\/assets\/.+\.(js|css)$/i.test(resourceUrl)) {
+
+                    // 非 JS/CSS 资源（图片、字体、manifest 等）加载失败不影响应用运行，
+                    // 也不该弹「请尝试刷新页面」——刷新解决不了，反而会误报服务端有意返回的
+                    // 品牌资源 404，把正常的伪装行为说成故障。
+                    let resourcePath = '';
+                    try {
+                        resourcePath = new URL(resourceUrl, window.location.href).pathname;
+                    } catch {
+                        console.debug('[Resource Load] Unresolvable resource error:', resourceUrl);
+                        return;
+                    }
+                    if (!isCriticalAssetPath(resourcePath)) {
+                        console.debug(
+                            '[Resource Load] Non-critical resource error suppressed:',
+                            resourceUrl
+                        );
+                        return;
+                    }
+                    if (localHost) {
                         console.debug('[Resource Load] Local asset error suppressed:', resourceUrl);
                         return;
                     }

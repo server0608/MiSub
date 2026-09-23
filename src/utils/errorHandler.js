@@ -184,7 +184,9 @@ class ErrorHandler {
             if (typeof navigator !== 'undefined' && /firefox/i.test(navigator.userAgent)) {
                 return `资源加载失败 (${fileName})。可能是浏览器隐私设置或扩展拦截了部分资源。`;
             }
-            return `资源加载失败 (${fileName})，请尝试刷新页面`;
+            // 走到这里说明自动清缓存重载已经试过一次且仍然失败，
+            // 所以提示「强制刷新」而不是普通刷新（普通刷新会命中同一份缓存）。
+            return `资源加载失败 (${fileName})，请尝试强制刷新页面（Ctrl/Cmd + Shift + R）`;
         }
         if (message.includes('network') || message.includes('fetch')) {
             return '网络连接失败，请检查网络';
