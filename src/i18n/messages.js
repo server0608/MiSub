@@ -1450,6 +1450,20 @@ export const messages = {
             downloadQr: '下载二维码',
             noDescription: '暂无简介',
         },
+        errors: {
+            timeout: '请求超时，请稍后重试',
+            resourceLoadIntercepted:
+                '资源加载失败 ({fileName})。可能是浏览器隐私设置或扩展拦截了部分资源。',
+            resourceLoad: '资源加载失败 ({fileName})，请尝试强制刷新页面（Ctrl/Cmd + Shift + R）',
+            network: '网络连接失败，请检查网络',
+            unauthorized: '认证失败，请重新登录',
+            kvMissing: '服务端存储未初始化，请联系管理员配置 KV 绑定',
+            d1Missing: '服务端数据库未初始化，请联系管理员配置 D1 绑定',
+            saveFailed: '数据保存失败，请稍后重试',
+            subscriptionFailed: '订阅更新失败，请稍后重试',
+            batchFailed: '批量操作失败，已降级为逐个处理',
+            generic: '操作失败，请稍后重试',
+        },
         common: {
             searchPlaceholder: '搜索...',
             searchSuggestions: '搜索建议',
@@ -3136,6 +3150,23 @@ export const messages = {
             scanToImport: 'Scan the QR code to import the subscription',
             downloadQr: 'Download QR code',
             noDescription: 'No description yet',
+        },
+        errors: {
+            timeout: 'The request timed out. Please try again later.',
+            resourceLoadIntercepted:
+                'Failed to load a resource ({fileName}). Browser privacy settings or an extension may be blocking some resources.',
+            resourceLoad:
+                'Failed to load a resource ({fileName}). Try a hard refresh (Ctrl/Cmd + Shift + R).',
+            network: 'Network connection failed. Please check your connection.',
+            unauthorized: 'Authentication failed. Please sign in again.',
+            kvMissing:
+                'Server storage is not initialised. Ask the administrator to configure the KV binding.',
+            d1Missing:
+                'Server database is not initialised. Ask the administrator to configure the D1 binding.',
+            saveFailed: 'Failed to save data. Please try again later.',
+            subscriptionFailed: 'Failed to update subscriptions. Please try again later.',
+            batchFailed: 'Batch operation failed and fell back to processing items one by one.',
+            generic: 'The operation failed. Please try again later.',
         },
         common: {
             searchPlaceholder: 'Search...',
