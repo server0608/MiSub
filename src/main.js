@@ -77,7 +77,14 @@ if (typeof window !== 'undefined') {
         if (!isCriticalAssetPath(resourcePath)) return false;
         if (hasAssetReloaded()) return false;
 
-        markAssetReloaded();
+        // 写不进标记就绝不能重载：站点数据被禁用时 sessionStorage 不可用，
+        // 「已重载过」永远读不到，于是每次重载都会再次走到这里 →
+        // 「加载失败 → 重载 → 仍然失败 → 再重载」无限刷新（实测 5 秒 62 次）。
+        // 宁可放弃自动恢复，也不能把用户卡在刷新循环里。
+        if (!markAssetReloaded()) {
+            console.warn('[Resource Load] Cannot persist reload marker, skip auto recovery');
+            return false;
+        }
         try {
             if ('caches' in window) {
                 const cacheKeys = await caches.keys();

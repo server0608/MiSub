@@ -76,4 +76,29 @@ describe('main.js 全局错误处理器接线', () => {
         // 非关键资源必须在 handleError 之前 return。
         expect(branch.slice(guardAt)).toMatch(/return;/);
     });
+
+    it('写不进「已重载」标记时不得重载（否则无限刷新）', () => {
+        // 背景：站点数据被禁用时 sessionStorage 不可用，「已重载过」永远读不到。
+        // 此时若仍然放行重载，每次重载都会再次失败 → 无限刷新循环
+        // （真实浏览器实测：5 秒内 62 次文档请求）。
+        // 必须检查写入结果，失败就放弃自动恢复。
+        expect(mainSource).toMatch(/if\s*\(!markAssetReloaded\(\)\)/);
+        expect(mainSource).toContain('skip auto recovery');
+
+        const start = mainSource.indexOf('const tryRecoverAssetLoad');
+        expect(start).toBeGreaterThan(-1);
+        const end = mainSource.indexOf('window.addEventListener(', start);
+        const body = mainSource.slice(start, end);
+
+        // 判定顺序：先看「已经重载过」，再写标记，写失败即退出
+        const alreadyAt = body.indexOf('if (hasAssetReloaded()) return false;');
+        const markAt = body.indexOf('if (!markAssetReloaded())');
+        expect(alreadyAt).toBeGreaterThan(-1);
+        expect(markAt).toBeGreaterThan(alreadyAt);
+
+        // 写失败的分支必须在真正触发重载（location.replace）之前 return
+        const reloadAt = body.indexOf('window.location.replace');
+        expect(reloadAt).toBeGreaterThan(markAt);
+        expect(body.slice(markAt, reloadAt)).toMatch(/return false;/);
+    });
 });
