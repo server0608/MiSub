@@ -137,6 +137,18 @@ describe('health-item-dismissal', () => {
         expect(readDismissedHealthItemIds()).toEqual([]);
     });
 
+    it('reports failure when storage silently drops the write', () => {
+        // Safari 无痕模式 / 部分隐私扩展：setItem 不抛错，但值并不会落盘。
+        // 只看「有没有抛异常」会把这种情况误判为成功。
+        vi.stubGlobal('localStorage', {
+            getItem: () => null,
+            setItem: () => {},
+            removeItem: () => {},
+        });
+
+        expect(dismissHealthItem('auto-token')).toBe(false);
+    });
+
     it('reports failure when the dismissal cannot be cleared', () => {
         dismissHealthItem('auto-token');
         const stored = localStorage.getItem(DISMISSED_HEALTH_ITEMS_KEY);

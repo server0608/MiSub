@@ -41,8 +41,11 @@ function writeAll(ids) {
         if (typeof localStorage === 'undefined') return false;
         // 控制体积：超出上限时丢弃最早写入的条目
         const trimmed = ids.slice(-MAX_ENTRIES);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
-        return true;
+        const serialized = JSON.stringify(trimmed);
+        localStorage.setItem(STORAGE_KEY, serialized);
+        // 回读校验：Safari 无痕模式、部分隐私扩展下 setItem 不抛错但也不落盘。
+        // 只看「有没有抛异常」会把这种情况当成成功，用户就会遇到「刷新后回来」。
+        return localStorage.getItem(STORAGE_KEY) === serialized;
     } catch (error) {
         // 隐私模式、站点存储被禁用、配额为 0 都会走到这里。
         // 返回值让调用方可以提示用户，而不是「点了没反应」。
@@ -97,7 +100,8 @@ export function clearDismissedHealthItems() {
     try {
         if (typeof localStorage === 'undefined') return false;
         localStorage.removeItem(STORAGE_KEY);
-        return true;
+        // 同样回读校验：删除也可能被静默忽略。
+        return localStorage.getItem(STORAGE_KEY) === null;
     } catch (error) {
         console.warn('[HealthItemDismissal] Failed to clear localStorage:', error);
         return false;
