@@ -4,7 +4,7 @@
     import Input from '../../ui/Input.vue';
     import Switch from '../../ui/Switch.vue';
     import OperatorChain from '../../features/Operators/OperatorChain.vue';
-    import { TRANSFORM_ASSETS } from '@/constants/transform-assets';
+    import { getLocalizedTransformAssetByUrl } from '@/constants/transform-assets';
     import { useI18n } from '@/i18n/index.js';
 
     const { t } = useI18n();
@@ -47,7 +47,7 @@
         const mode = props.globalSettings?.transformConfigMode || 'builtin';
         if (mode === 'builtin') return t('profileModal.builtinAutoRoute');
         const url = props.globalSettings?.transformConfig || '';
-        const asset = TRANSFORM_ASSETS.configs.find((a) => a.url === url);
+        const asset = getLocalizedTransformAssetByUrl(url, t);
         return asset ? asset.name : url ? t('profileModal.customUrl') : t('profileModal.notSet');
     });
 

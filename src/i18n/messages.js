@@ -1442,6 +1442,54 @@ export const messages = {
             varProtocolGroupCounts: '协议策略组节点数量（同 <%protocolGroupCounts%>）',
             varProtocolGroupList: '协议策略组逐行清单（同 <%protocolGroupList%>）',
         },
+        transformAssets: {
+            builtinMinimal: {
+                name: 'MiSub 内置 极简默认分流',
+                description: 'MiSub 自带的默认极简模板，适合日常通用、新手用户和优先稳定的场景。',
+            },
+            acl4ssrLite: {
+                name: 'MiSub 内置 ACL4SSR 精简分流',
+                description:
+                    '内置精简 ACL4SSR 分流模板，适合习惯 ACL4SSR 规则且希望保持轻量的用户。',
+            },
+            mediaAi: {
+                name: 'MiSub 内置 流媒体与 AI 分流',
+                description: '面向流媒体和 AI 服务使用场景的内置模板，保留核心分流和地区候选链。',
+            },
+            acl4ssrFull: {
+                name: 'MiSub 内置 ACL4SSR 完整分流',
+                description:
+                    '内置完整 ACL4SSR 分流模板，可通过统一模板模型生成 Clash 与 Sing-Box 配置。',
+            },
+            cmOnlineDefault: {
+                name: 'CM_Online 默认版 识别港美地区(与Github同步)',
+                description: '经典 ACL4SSR 规则，适合 Clash 系列客户端。',
+            },
+            cmOnlineMultiCountry: {
+                name: 'CM_Online_MultiCountry 识别港美地区 负载均衡(与Github同步)',
+                description: '适合需要多地区自动分组和负载均衡的 Clash 用户。',
+            },
+            cmOnlineMultiCountryCf: {
+                name: 'CM_Online_MultiCountry_CF 识别港美地区、CloudFlareCDN 负载均衡 Worker节点专用(与Github同步)',
+                description: 'Cloudflare Worker 节点场景专用的 Clash 预设。',
+            },
+            cmOnlineFull: {
+                name: 'CM_Online_Full 识别多地区分组(与Github同步)',
+                description: '规则更完整，分组更细，适合作为 Clash 进阶预设。',
+            },
+            cmOnlineFullCf: {
+                name: 'CM_Online_Full_CF 识别多地区、CloudFlareCDN 分组 Worker节点专用(与Github同步)',
+                description: '面向 Worker/CDN 线路的完整 Clash 预设。',
+            },
+            cmOnlineFullMultiMode: {
+                name: 'CM_Online_Full_MultiMode 识别多地区 负载均衡(与Github同步)',
+                description: '适合需要完整规则和多模式分组的 Clash 用户。',
+            },
+            cmOnlineFullMultiModeCf: {
+                name: 'CM_Online_Full_MultiMode_CF 识别多地区、CloudFlareCDN 负载均衡 Worker节点专用(与Github同步)',
+                description: '完整多模式的 Worker/CDN Clash 预设。',
+            },
+        },
         d1Migration: {
             startUpgrade: '开始升级',
             upgrading: '升级中...',
@@ -3269,6 +3317,58 @@ export const messages = {
                 'Protocol strategy group node counts (same as <%protocolGroupCounts%>)',
             varProtocolGroupList:
                 'Protocol strategy group line-by-line list (same as <%protocolGroupList%>)',
+        },
+        transformAssets: {
+            builtinMinimal: {
+                name: 'MiSub Builtin — Minimal Default Routing',
+                description:
+                    'MiSub built-in minimal default template, suited to everyday use, beginners and stability-first scenarios.',
+            },
+            acl4ssrLite: {
+                name: 'MiSub Builtin — ACL4SSR Lite Routing',
+                description:
+                    'Built-in lite ACL4SSR routing template for users familiar with ACL4SSR rules who prefer to stay lightweight.',
+            },
+            mediaAi: {
+                name: 'MiSub Builtin — Streaming & AI Routing',
+                description:
+                    'Built-in template for streaming and AI service scenarios, keeping the core routing and region candidate chains.',
+            },
+            acl4ssrFull: {
+                name: 'MiSub Builtin — ACL4SSR Full Routing',
+                description:
+                    'Built-in full ACL4SSR routing template that can generate Clash and Sing-Box configs through the unified template model.',
+            },
+            cmOnlineDefault: {
+                name: 'CM_Online Default — detects HK/US regions (synced with GitHub)',
+                description: 'Classic ACL4SSR rules, suited to Clash family clients.',
+            },
+            cmOnlineMultiCountry: {
+                name: 'CM_Online_MultiCountry — detects HK/US regions, load balancing (synced with GitHub)',
+                description:
+                    'For Clash users who need automatic multi-region grouping and load balancing.',
+            },
+            cmOnlineMultiCountryCf: {
+                name: 'CM_Online_MultiCountry_CF — detects HK/US regions, CloudFlareCDN load balancing, for Worker nodes (synced with GitHub)',
+                description: 'Clash preset dedicated to Cloudflare Worker node scenarios.',
+            },
+            cmOnlineFull: {
+                name: 'CM_Online_Full — detects multi-region grouping (synced with GitHub)',
+                description:
+                    'More complete rules with finer grouping; a good advanced Clash preset.',
+            },
+            cmOnlineFullCf: {
+                name: 'CM_Online_Full_CF — detects multi-region, CloudFlareCDN grouping, for Worker nodes (synced with GitHub)',
+                description: 'Complete Clash preset for Worker/CDN routes.',
+            },
+            cmOnlineFullMultiMode: {
+                name: 'CM_Online_Full_MultiMode — detects multi-region, load balancing (synced with GitHub)',
+                description: 'For Clash users who need complete rules and multi-mode grouping.',
+            },
+            cmOnlineFullMultiModeCf: {
+                name: 'CM_Online_Full_MultiMode_CF — detects multi-region, CloudFlareCDN load balancing, for Worker nodes (synced with GitHub)',
+                description: 'Complete multi-mode Worker/CDN Clash preset.',
+            },
         },
         d1Migration: {
             startUpgrade: 'Start upgrade',

@@ -1,7 +1,7 @@
 <script setup>
     import { computed, ref, watch } from 'vue';
     import { storeToRefs } from 'pinia';
-    import { TRANSFORM_ASSETS } from '@/constants/transform-assets';
+    import { getLocalizedTransformAssets } from '@/constants/transform-assets';
     import { useDataStore } from '@/stores/useDataStore.js';
     import { useI18n } from '../../i18n/index.js';
 
@@ -113,7 +113,8 @@
     const assets = computed(() => {
         if (props.customTemplatesOnly) return customTemplateAssets.value;
 
-        const builtinAndRemote = TRANSFORM_ASSETS.configs.filter((item) => {
+        // 在 computed 里解析模板名称，切换语言时下拉框即时更新。
+        const builtinAndRemote = getLocalizedTransformAssets(t).filter((item) => {
             if (!props.excludeBuiltinAssets) return true;
             return !String(item.url || '').startsWith('builtin:');
         });
