@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
+import { isChunkLoadError, shouldReloadForChunkError } from '../utils/chunk-reload.js';
 
 // Lazy load views for better performance
 const DashboardView = () => import('../views/DashboardView.vue');
@@ -91,16 +92,8 @@ const router = createRouter({
 
 // 自动恢复动态 chunk 加载失败导致的白屏
 router.onError((error) => {
-    const message = error?.message || '';
-    if (
-        message.includes('Failed to fetch dynamically imported module') ||
-        message.includes('error loading dynamically imported module')
-    ) {
-        const reloadKey = 'misub:chunk-reload';
-        if (sessionStorage.getItem(reloadKey) !== '1') {
-            sessionStorage.setItem(reloadKey, '1');
-            window.location.reload();
-        }
+    if (isChunkLoadError(error?.message) && shouldReloadForChunkError()) {
+        window.location.reload();
     }
 });
 

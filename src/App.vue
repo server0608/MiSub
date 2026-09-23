@@ -14,6 +14,7 @@
     import { detectLegacyD1 } from './lib/api.js';
     import { useI18n } from './i18n/index.js';
     import { configureAuthGuard } from './router/index.js';
+    import { readSessionPreference } from './utils/session-preference.js';
 
     // Lazy components
     const Login = defineAsyncComponent(() => import('./components/modals/Login.vue'));
@@ -70,12 +71,8 @@
             if (normalized && normalized !== 'login') return `/${normalized}`;
         }
 
-        try {
-            const rememberedPath = sessionStorage.getItem('misub:login-path');
-            if (rememberedPath && rememberedPath.startsWith('/')) return rememberedPath;
-        } catch {
-            // Ignore storage failures and use the default entry.
-        }
+        const rememberedPath = readSessionPreference('misub:login-path');
+        if (rememberedPath && rememberedPath.startsWith('/')) return rememberedPath;
         return '/login';
     });
 

@@ -9,6 +9,8 @@ import { i18n } from './i18n/index.js';
 import { useToastStore } from './stores/toast.js';
 import { configureUnauthorizedHandler } from './lib/http.js';
 import { isCriticalAssetPath, isLocalHost, isSameOriginUrl } from './utils/url-origin.js';
+import { isChunkLoadError, shouldReloadForChunkError } from './utils/chunk-reload.js';
+import { readSessionPreference, writeSessionPreference } from './utils/session-preference.js';
 
 // 全局错误处理
 if (typeof window !== 'undefined') {
@@ -16,15 +18,11 @@ if (typeof window !== 'undefined') {
     // 处理未捕获的Promise拒绝
     window.addEventListener('unhandledrejection', (event) => {
         const message = event.reason?.message || '';
-        if (
-            message.includes('Failed to fetch dynamically imported module') ||
-            message.includes('error loading dynamically imported module')
-        ) {
-            const reloadKey = 'misub:chunk-reload';
-            if (sessionStorage.getItem(reloadKey) !== '1') {
-                sessionStorage.setItem(reloadKey, '1');
-                window.location.reload();
-            }
+        // 发版后旧页面拿不到已删除的 chunk：重载一次（见 utils/chunk-reload.js）。
+        // 注意不要在这里 return —— 本次会话已经重载过时不会再次重载，
+        // 此时需要继续往下走到 handleError，让用户知道加载失败了。
+        if (isChunkLoadError(message) && shouldReloadForChunkError()) {
+            window.location.reload();
         }
         // 浏览器扩展注入脚本 / 跨域第三方脚本导致的拒绝与自己无关（如扩展的
         // reportAllChanges TypeError）。静默丢弃：preventDefault 同时抑制
@@ -65,21 +63,8 @@ if (typeof window !== 'undefined') {
         isSameOriginUrl(resourceUrl, currentOrigin, window.location.href);
     // 只有打包产物里的 JS/CSS 失败才值得「清缓存重载」与错误上报，
     // 判定逻辑见 utils/url-origin.js 的 isCriticalAssetPath。
-    const hasAssetReloaded = () => {
-        try {
-            return sessionStorage.getItem(assetReloadKey) === '1';
-        } catch (error) {
-            console.warn('[Resource Load] Failed to read sessionStorage:', error);
-            return false;
-        }
-    };
-    const markAssetReloaded = () => {
-        try {
-            sessionStorage.setItem(assetReloadKey, '1');
-        } catch (error) {
-            console.warn('[Resource Load] Failed to write sessionStorage:', error);
-        }
-    };
+    const hasAssetReloaded = () => readSessionPreference(assetReloadKey) === '1';
+    const markAssetReloaded = () => writeSessionPreference(assetReloadKey, '1');
 
     const tryRecoverAssetLoad = async (resourceUrl) => {
         if (!isSameOriginResource(resourceUrl)) return false;
