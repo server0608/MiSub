@@ -209,13 +209,25 @@ class ErrorHandler {
         if (message.includes('Unauthorized') || message.includes('401')) {
             return t('errors.unauthorized');
         }
-        if (message.includes('MISUB_KV') || message.includes('KV 绑定')) {
+        // ⚠️ 下面两条匹配的是**服务端返回的消息文本**（functions/ 里产生的中文），
+        // 不是界面文案，所以不能用 t() 改写，也不能本地化。
+        // 这是一条隐式跨端契约，用正则容忍语序/虚词差异，别退化成 includes 精确子串：
+        //   - 服务端既会说「请先恢复 KV 绑定」，也会说「KV 未绑定」，
+        //     多一个「未」字就让 includes('KV 绑定') 整个失效；
+        //   - 服务端 D1 适配器抛的是英文 'D1 database not available'。
+        // tests/unit/error-handler-server-contract.test.js 会扫描 functions/ 钉住这条契约。
+        if (/MISUB_KV|KV\s*(?:未)?绑定/.test(message)) {
             return t('errors.kvMissing');
         }
-        if (message.includes('MISUB_DB') || message.includes('D1 绑定')) {
+        if (/MISUB_DB|D1\s*(?:未)?绑定|D1 database not available/i.test(message)) {
             return t('errors.d1Missing');
         }
-        if (message.includes('storage') || message.includes('保存失败')) {
+        // 这两种语言的措辞都要认：message 既可能来自服务端（中文），
+        // 也可能是客户端 `throw new Error(t('store.saveFailed'))` 抛出的本地化文案。
+        // 只认中文的话，英文界面下这条分支永远不命中，用户看到的是通用提示 ——
+        // 分类随界面语言漂移。tests/unit/error-message-i18n-collision.test.js
+        // 会断言同一个 key 的中英版本落在同一分支。
+        if (/storage|保存失败|save failed/i.test(message)) {
             return t('errors.saveFailed');
         }
         if (context?.includes('subscription')) {

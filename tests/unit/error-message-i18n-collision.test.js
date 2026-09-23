@@ -1,24 +1,34 @@
 /**
- * 被当作 Error.message 抛出的 i18n 文案，不能长得像「网络错误」。
+ * 被当作 Error.message 抛出的 i18n 文案，不能让 errorHandler 的分类随语言漂移。
  *
  * 背景：本仓库习惯写 `throw new Error(t('some.key'))` —— 把**翻译文案**塞进
- * Error.message。随后 errorHandler 这类兜底逻辑会对 message 做模式匹配。
- * 于是同一个故障在不同语言下会被分到不同分支：
+ * Error.message。随后 errorHandler 会对 message 做模式匹配，于是同一个故障
+ * 在不同语言下会被分到不同分支：
  *
  *   en: 'Failed to fetch nodes' → 含 "failed to fetch" → 被判为网络问题
  *   zh: '获取节点失败'           → 不匹配               → 显示原始消息
  *
  * 用户界面语言不同、提示内容就不同，这是错的。更根本的问题是：
  * 错误消息是给机器看的**数据**，翻译文案是给人看的**界面**，两者不该混用。
- * 短期内不便把 29 处 throw 全部改成携带 code 的对象，所以先用这个守卫兜住：
- * 任何被抛出的文案，在**任一语言**下都不得匹配传输层错误措辞。
+ * 短期内不便把 29 处 throw 全部改成携带 code 的对象，所以用两条守卫兜住：
+ *
+ *   1. 被抛出的文案在**任一语言**下都不得匹配传输层错误措辞
+ *      （已据此修掉 3 条英文文案）；
+ *   2. 同一个 key 的中文版与英文版，必须被 errorHandler 分到**同一分支**
+ *      （已据此修掉 saveFailed 只认中文「保存失败」、漏掉英文 "Save failed"）。
+ *
+ * 两条都带「扫描文件数 > 100 / key 数 > 20」护栏，防止目录改名后静默空转；
+ * 另各有一条自检用例，确保断言不是因为谓词恒假而「通过」。
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { messages } from '../../src/i18n/messages.js';
-import { t } from '../../src/i18n/index.js';
+import { setLocale, t } from '../../src/i18n/index.js';
 import { isNetworkErrorMessage } from '../../src/utils/network-error.js';
+import { ErrorHandler } from '../../src/utils/errorHandler.js';
+
+const handler = new ErrorHandler();
 
 const SRC_ROOT = path.resolve(__dirname, '../../src');
 
@@ -97,5 +107,47 @@ describe('错误消息文案与网络判定的碰撞守卫', () => {
             violations,
             `以下错误文案会被误判成网络问题，请改写措辞：\n${violations.join('\n')}`
         ).toEqual([]);
+    });
+
+    /**
+     * 更强的判据：同一个 key 的中文版与英文版，必须被 errorHandler 分到**同一分支**。
+     *
+     * 只要分类逻辑是「对 message 做模式匹配」，而 message 又是翻译文案，
+     * 中英版本就可能落到不同分支 —— 用户界面语言不同、看到的原因就不同。
+     * 这里把 errorHandler 的输出反查回 errors.* 的 key 名，再比较两个语言下的结果。
+     */
+    const classify = (message, locale) => {
+        setLocale(locale);
+        const text = handler.getUserFriendlyMessage({ message });
+        const dict = messages[locale].errors;
+        return Object.keys(dict).find((k) => dict[k] === text) ?? null;
+    };
+
+    it('同一文案的中英版本被分到同一分支（分类不随语言漂移）', () => {
+        const violations = [];
+
+        for (const { key, file } of thrownKeys) {
+            const zh = classify(t(key, {}, 'zh-CN'), 'zh-CN');
+            const en = classify(t(key, {}, 'en-US'), 'en-US');
+            if (zh !== en) {
+                violations.push(
+                    `${key} (${file})\n    zh-CN → ${zh} = "${t(key, {}, 'zh-CN')}"` +
+                        `\n    en-US → ${en} = "${t(key, {}, 'en-US')}"`
+                );
+            }
+        }
+
+        expect(
+            violations,
+            `以下文案的中英版本被分到了不同分支，请改写措辞：\n${violations.join('\n')}`
+        ).toEqual([]);
+    });
+
+    it('分类函数本身有效（同一分支时确实返回相同的 key）', () => {
+        // 保证上一条不是「两个语言都返回 null 所以相等」而恒真
+        expect(classify('Failed to fetch', 'zh-CN')).toBe('network');
+        expect(classify('NetworkError when attempting to fetch resource.', 'en-US')).toBe(
+            'network'
+        );
     });
 });
