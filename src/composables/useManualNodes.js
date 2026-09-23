@@ -7,6 +7,7 @@ import { useToastStore } from '../stores/toast.js'; // Restored
 import { extractNodeName, extractHostAndPort } from '../lib/utils.js';
 import { pingNode } from '../utils/ping.js';
 import { filterManualNodes, isManualNodeEntry } from './manual-nodes/filters.js';
+import { readRawPreference, writeRawPreference } from '../utils/local-preference.js';
 import { buildDedupPlan as buildDedupPlanCore } from './manual-nodes/dedup.js';
 import { buildAutoSortedSubscriptions } from './manual-nodes/sorting.js';
 import {
@@ -30,11 +31,12 @@ export function useManualNodes(markDirty) {
     });
 
     const manualNodesCurrentPage = ref(1);
-    const manualNodesPerPage = ref(parseInt(localStorage.getItem('manualNodesPPS')) || 24);
+    // 走共享助手：站点存储被禁用时裸读会抛 SecurityError，导致整个组合式函数起不来
+    const manualNodesPerPage = ref(parseInt(readRawPreference('manualNodesPPS'), 10) || 24);
     const searchTerm = ref('');
 
     watch(manualNodesPerPage, (newVal) => {
-        localStorage.setItem('manualNodesPPS', newVal);
+        writeRawPreference('manualNodesPPS', newVal);
         manualNodesCurrentPage.value = 1;
     });
 

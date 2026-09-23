@@ -12,6 +12,7 @@
     import SubscriptionImportModal from '../components/modals/SubscriptionImportModal.vue';
     import BatchGroupModal from '../components/modals/BatchGroupModal.vue'; // Added
     import { useI18n } from '../i18n/index.js';
+    import { readRawPreference, writeRawPreference } from '../utils/local-preference.js';
 
     const GroupManagementModal = defineAsyncComponent(
         () => import('../components/modals/GroupManagementModal.vue')
@@ -24,7 +25,7 @@
 
     // Component Logic Reuse
     const isSortingNodes = ref(false);
-    const manualNodeViewMode = ref(localStorage.getItem('manualNodeViewMode') || 'card');
+    const manualNodeViewMode = ref(readRawPreference('manualNodeViewMode') || 'card');
     const showDeleteNodesModal = ref(false);
     const showBatchDeleteModal = ref(false);
     const batchDeleteIds = ref([]);
@@ -85,7 +86,7 @@
     // Actions
     const setViewMode = (mode) => {
         manualNodeViewMode.value = mode;
-        localStorage.setItem('manualNodeViewMode', mode);
+        writeRawPreference('manualNodeViewMode', mode);
     };
 
     const handleDeleteNodeWithCleanup = (nodeId) => {

@@ -13,6 +13,7 @@
     import { useBackupLogic } from '../../../composables/useBackupLogic.js';
     import { storeToRefs } from 'pinia';
     import { useI18n } from '@/i18n/index.js';
+    import { readRawPreference, writeRawPreference } from '@/utils/local-preference.js';
 
     const isDev = import.meta.env.DEV;
 
@@ -271,7 +272,7 @@
     onMounted(() => {
         initializeState();
         window.addEventListener('beforeunload', handleBeforeUnload);
-        const savedViewMode = localStorage.getItem('manualNodeViewMode');
+        const savedViewMode = readRawPreference('manualNodeViewMode');
         if (savedViewMode) {
             manualNodeViewMode.value = savedViewMode;
         }
@@ -297,7 +298,7 @@
 
     const setViewMode = (mode) => {
         manualNodeViewMode.value = mode;
-        localStorage.setItem('manualNodeViewMode', mode);
+        writeRawPreference('manualNodeViewMode', mode);
     };
 
     // --- 其他 JS 逻辑 (省略) ---
