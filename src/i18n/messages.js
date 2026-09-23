@@ -1633,6 +1633,8 @@ export const messages = {
             batchFailed: '批量操作失败，已降级为逐个处理',
             generic: '操作失败，请稍后重试',
             preferenceNotSaved: '当前浏览器禁用了本地存储，该设置无法长期保存',
+            unknown: '未知错误',
+            requestFailedWithStatus: '请求失败 ({status})',
         },
         common: {
             searchPlaceholder: '搜索...',
@@ -3528,6 +3530,8 @@ export const messages = {
             generic: 'The operation failed. Please try again later.',
             preferenceNotSaved:
                 'Local storage is disabled in this browser — this setting will not persist',
+            unknown: 'Unknown error',
+            requestFailedWithStatus: 'Request failed ({status})',
         },
         common: {
             searchPlaceholder: 'Search...',
