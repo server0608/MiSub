@@ -546,8 +546,8 @@ export const messages = {
                 dismiss: '忽略',
                 dismissItem: '从列表中忽略该项（仅影响本机显示）',
                 restoreDismissed: '已忽略 {count} 项，点击恢复',
-                dismissFailed: '当前浏览器禁用了本地存储，忽略状态无法保存',
-                restoreFailed: '当前浏览器禁用了本地存储，无法恢复已忽略的项',
+                dismissFailed: '忽略状态同步失败，请稍后重试',
+                restoreFailed: '恢复已忽略的项失败，请稍后重试',
             },
             healthItems: {
                 missingSubscriptions: {
@@ -2365,8 +2365,8 @@ export const messages = {
                 dismiss: 'Dismiss',
                 dismissItem: 'Hide this item locally',
                 restoreDismissed: '{count} dismissed — restore',
-                dismissFailed: 'Local storage is disabled — this dismissal cannot be saved',
-                restoreFailed: 'Local storage is disabled — dismissed items cannot be restored',
+                dismissFailed: 'Failed to sync the dismissal. Please try again later.',
+                restoreFailed: 'Failed to restore dismissed items. Please try again later.',
             },
             healthItems: {
                 missingSubscriptions: {

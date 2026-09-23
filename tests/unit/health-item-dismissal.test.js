@@ -1,174 +1,175 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+/**
+ * 忽略列表的纯函数层 + 旧数据迁移。
+ *
+ * 这份列表现在随 `settings.dismissedHealthItems` 同步到服务端（跨设备生效），
+ * 所以本模块**不再自己读写存储**，只负责「数组怎么算」。
+ * 存储与同步在 DashboardView → useDataStore.saveSettings 那一层，
+ * 相关接线由 tests/unit/dashboard-health-view.test.js 覆盖。
+ *
+ * 底部两个 legacy helper 是给老用户做一次性迁移用的，仍然走 local-preference。
+ */
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
-    DISMISSED_HEALTH_ITEMS_KEY,
-    clearDismissedHealthItems,
-    dismissHealthItem,
+    LEGACY_DISMISSED_HEALTH_ITEMS_KEY,
+    MAX_DISMISSED_HEALTH_ITEMS,
+    addDismissedHealthItem,
+    clearLegacyDismissedHealthItemIds,
     filterDismissedHealthItems,
     isHealthItemDismissed,
-    readDismissedHealthItemIds,
-    restoreHealthItem,
+    normalizeDismissedHealthItemIds,
+    readLegacyDismissedHealthItemIds,
 } from '../../src/utils/health-item-dismissal.js';
 
-describe('health-item-dismissal', () => {
-    beforeEach(() => {
-        localStorage.clear();
+describe('health-item-dismissal（纯函数）', () => {
+    it('未忽略任何项时为空', () => {
+        expect(normalizeDismissedHealthItemIds(undefined)).toEqual([]);
+        expect(isHealthItemDismissed([], 'auto-token')).toBe(false);
     });
 
-    afterEach(() => {
-        vi.restoreAllMocks();
-        vi.unstubAllGlobals();
+    it('记录并识别已忽略的 id', () => {
+        const ids = addDismissedHealthItem([], 'auto-token');
+
+        expect(ids).toEqual(['auto-token']);
+        expect(isHealthItemDismissed(ids, 'auto-token')).toBe(true);
+        expect(isHealthItemDismissed(ids, 'expired-subscriptions')).toBe(false);
     });
 
-    it('starts with nothing dismissed', () => {
-        expect(readDismissedHealthItemIds()).toEqual([]);
-        expect(isHealthItemDismissed('auto-token')).toBe(false);
+    it('重复忽略不会产生重复项', () => {
+        const once = addDismissedHealthItem([], 'auto-token');
+        const twice = addDismissedHealthItem(once, 'auto-token');
+
+        expect(twice).toEqual(['auto-token']);
     });
 
-    it('remembers a dismissed item id', () => {
-        dismissHealthItem('auto-token');
+    it('不改动传入的数组（纯函数）', () => {
+        const original = ['auto-token'];
+        const next = addDismissedHealthItem(original, 'low-traffic');
 
-        expect(isHealthItemDismissed('auto-token')).toBe(true);
-        expect(isHealthItemDismissed('expired-subscriptions')).toBe(false);
-        expect(readDismissedHealthItemIds()).toEqual(['auto-token']);
+        expect(original).toEqual(['auto-token']);
+        expect(next).toEqual(['auto-token', 'low-traffic']);
     });
 
-    it('ignores duplicate dismissals', () => {
-        dismissHealthItem('auto-token');
-        dismissHealthItem('auto-token');
-
-        expect(readDismissedHealthItemIds()).toEqual(['auto-token']);
+    it('忽略空白 id，避免污染设置', () => {
+        for (const blank of ['', '   ', null, undefined, 42, {}]) {
+            expect(addDismissedHealthItem(['auto-token'], blank)).toEqual(['auto-token']);
+        }
     });
 
-    it('restores a single item', () => {
-        dismissHealthItem('auto-token');
-        dismissHealthItem('low-traffic');
-        restoreHealthItem('auto-token');
+    it('比较前会 trim', () => {
+        const ids = addDismissedHealthItem([], '  auto-token  ');
 
-        expect(readDismissedHealthItemIds()).toEqual(['low-traffic']);
+        expect(ids).toEqual(['auto-token']);
+        expect(isHealthItemDismissed(ids, 'auto-token')).toBe(true);
+        expect(isHealthItemDismissed(['auto-token'], '  auto-token  ')).toBe(true);
     });
 
-    it('clears every dismissal', () => {
-        dismissHealthItem('auto-token');
-        dismissHealthItem('low-traffic');
-        clearDismissedHealthItems();
-
-        expect(readDismissedHealthItemIds()).toEqual([]);
+    it('丢弃非数组 / 非字符串项，并去重', () => {
+        // 设置是同步过来的，可能被旧版本写坏或被其它工具污染
+        expect(normalizeDismissedHealthItemIds({ a: 1 })).toEqual([]);
+        expect(normalizeDismissedHealthItemIds('auto-token')).toEqual([]);
+        expect(normalizeDismissedHealthItemIds(['ok', 42, null, '', 'ok'])).toEqual(['ok']);
     });
 
-    it('filters dismissed items out of a list', () => {
-        dismissHealthItem('low-traffic');
+    it('上限之外丢弃最早的条目', () => {
+        let ids = [];
+        for (let i = 0; i < MAX_DISMISSED_HEALTH_ITEMS + 50; i += 1) {
+            ids = addDismissedHealthItem(ids, `item-${i}`);
+        }
+
+        expect(ids.length).toBe(MAX_DISMISSED_HEALTH_ITEMS);
+        expect(ids[ids.length - 1]).toBe(`item-${MAX_DISMISSED_HEALTH_ITEMS + 49}`);
+        expect(ids).not.toContain('item-0');
+    });
+
+    it('从列表里过滤掉已忽略的条目', () => {
         const items = [{ id: 'auto-token' }, { id: 'low-traffic' }, { id: 'zero-nodes' }];
 
-        expect(filterDismissedHealthItems(items).map((i) => i.id)).toEqual([
+        expect(filterDismissedHealthItems(items, ['low-traffic']).map((i) => i.id)).toEqual([
             'auto-token',
             'zero-nodes',
         ]);
     });
 
-    it('ignores blank ids so the store cannot be polluted', () => {
-        dismissHealthItem('');
-        dismissHealthItem('   ');
-        dismissHealthItem(null);
-
-        expect(readDismissedHealthItemIds()).toEqual([]);
+    it('过滤时容忍畸形输入', () => {
+        expect(filterDismissedHealthItems(null, ['x'])).toEqual([]);
+        expect(filterDismissedHealthItems([{ id: 'a' }, null, {}], ['b'])).toEqual([
+            { id: 'a' },
+            null,
+            {},
+        ]);
     });
 
-    it('trims ids before comparing', () => {
-        dismissHealthItem('  auto-token  ');
-
-        expect(isHealthItemDismissed('auto-token')).toBe(true);
-    });
-
-    it('survives corrupted storage without throwing', () => {
-        localStorage.setItem(DISMISSED_HEALTH_ITEMS_KEY, 'not-json{{');
-
-        expect(readDismissedHealthItemIds()).toEqual([]);
-        expect(isHealthItemDismissed('auto-token')).toBe(false);
-
-        // Writing still works after a corrupt read.
-        dismissHealthItem('auto-token');
-        expect(isHealthItemDismissed('auto-token')).toBe(true);
-    });
-
-    it('discards non-array storage payloads', () => {
-        localStorage.setItem(DISMISSED_HEALTH_ITEMS_KEY, JSON.stringify({ a: 1 }));
-
-        expect(readDismissedHealthItemIds()).toEqual([]);
-    });
-
-    it('discards non-string entries inside the array', () => {
-        localStorage.setItem(DISMISSED_HEALTH_ITEMS_KEY, JSON.stringify(['ok', 42, null, '']));
-
-        expect(readDismissedHealthItemIds()).toEqual(['ok']);
-    });
-
-    it('caps the stored list so it cannot grow without bound', () => {
-        for (let i = 0; i < 150; i += 1) dismissHealthItem(`item-${i}`);
-
-        const ids = readDismissedHealthItemIds();
-        expect(ids.length).toBe(100);
-        // The newest entries are the ones kept.
-        expect(ids[ids.length - 1]).toBe('item-149');
-        expect(ids).not.toContain('item-0');
-    });
-
-    // --- 写入结果可观测（隐私模式 / 存储被禁用时不能「静默失败」） ---
-
-    it('reports whether a dismissal was actually persisted', () => {
-        expect(dismissHealthItem('auto-token')).toBe(true);
-        // 已忽略视为已持久化，重复点击不应被当成失败。
-        expect(dismissHealthItem('auto-token')).toBe(true);
-        // 空 id 从未被持久化。
-        expect(dismissHealthItem('')).toBe(false);
-    });
-
-    it('reports failure when storage rejects the write', () => {
+    it('纯函数不碰任何存储（存储全坏也照样算）', () => {
+        // 这是本模块的核心约定：算数组与存不存得下无关。
+        // 如果哪天有人把读写塞回这里，这条会失败。
         vi.stubGlobal('localStorage', {
-            getItem: () => null,
-            setItem: () => {
-                throw new Error('QuotaExceededError');
+            getItem: () => {
+                throw new Error('SecurityError');
             },
-            removeItem: () => {},
+            setItem: () => {
+                throw new Error('SecurityError');
+            },
+            removeItem: () => {
+                throw new Error('SecurityError');
+            },
         });
 
-        expect(dismissHealthItem('auto-token')).toBe(false);
-        expect(isHealthItemDismissed('auto-token')).toBe(false);
-        expect(readDismissedHealthItemIds()).toEqual([]);
+        const ids = addDismissedHealthItem([], 'auto-token');
+        expect(ids).toEqual(['auto-token']);
+        expect(isHealthItemDismissed(ids, 'auto-token')).toBe(true);
+        expect(filterDismissedHealthItems([{ id: 'auto-token' }], ids)).toEqual([]);
+        vi.unstubAllGlobals();
+    });
+});
+
+describe('旧数据一次性迁移', () => {
+    afterEach(() => {
+        vi.unstubAllGlobals();
+        localStorage.clear();
     });
 
-    it('reports failure when storage silently drops the write', () => {
-        // Safari 无痕模式 / 部分隐私扩展：setItem 不抛错，但值并不会落盘。
-        // 只看「有没有抛异常」会把这种情况误判为成功。
-        vi.stubGlobal('localStorage', {
-            getItem: () => null,
-            setItem: () => {},
-            removeItem: () => {},
-        });
-
-        expect(dismissHealthItem('auto-token')).toBe(false);
+    it('迁移用的 key 必须与历史一致，否则老用户的记录读不出来', () => {
+        expect(LEGACY_DISMISSED_HEALTH_ITEMS_KEY).toBe('misub:dismissedHealthItems');
     });
 
-    it('reports failure when the dismissal cannot be cleared', () => {
-        dismissHealthItem('auto-token');
-        const stored = localStorage.getItem(DISMISSED_HEALTH_ITEMS_KEY);
+    it('没有旧记录时返回空数组', () => {
+        expect(readLegacyDismissedHealthItemIds()).toEqual([]);
+    });
 
+    it('读出旧记录并规范化', () => {
+        localStorage.setItem(
+            LEGACY_DISMISSED_HEALTH_ITEMS_KEY,
+            JSON.stringify(['auto-token', 42, '', 'auto-token', 'low-traffic'])
+        );
+
+        expect(readLegacyDismissedHealthItemIds()).toEqual(['auto-token', 'low-traffic']);
+    });
+
+    it('旧记录损坏时退化为空数组而不是抛错', () => {
+        localStorage.setItem(LEGACY_DISMISSED_HEALTH_ITEMS_KEY, 'not-json{{');
+        expect(readLegacyDismissedHealthItemIds()).toEqual([]);
+
+        localStorage.setItem(LEGACY_DISMISSED_HEALTH_ITEMS_KEY, JSON.stringify({ a: 1 }));
+        expect(readLegacyDismissedHealthItemIds()).toEqual([]);
+    });
+
+    it('能清除旧记录', () => {
+        localStorage.setItem(LEGACY_DISMISSED_HEALTH_ITEMS_KEY, JSON.stringify(['auto-token']));
+
+        expect(clearLegacyDismissedHealthItemIds()).toBe(true);
+        expect(readLegacyDismissedHealthItemIds()).toEqual([]);
+    });
+
+    it('清除失败时返回 false，调用方据此保留旧键下次再试', () => {
         vi.stubGlobal('localStorage', {
-            getItem: () => stored,
+            getItem: () => JSON.stringify(['auto-token']),
             setItem: () => {},
             removeItem: () => {
                 throw new Error('SecurityError');
             },
         });
 
-        expect(clearDismissedHealthItems()).toBe(false);
-        expect(isHealthItemDismissed('auto-token')).toBe(true);
-    });
-
-    it('self-heals a non-array payload on the next write', () => {
-        localStorage.setItem(DISMISSED_HEALTH_ITEMS_KEY, JSON.stringify({ a: 1 }));
-
-        expect(dismissHealthItem('auto-token')).toBe(true);
-        expect(readDismissedHealthItemIds()).toEqual(['auto-token']);
+        expect(clearLegacyDismissedHealthItemIds()).toBe(false);
     });
 });

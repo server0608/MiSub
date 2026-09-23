@@ -1,5 +1,5 @@
 <script setup>
-    import { computed, ref, defineAsyncComponent } from 'vue';
+    import { computed, ref, defineAsyncComponent, onMounted } from 'vue';
     import { useDataStore } from '../stores/useDataStore.js';
     import { useBulkImportLogic } from '../composables/useBulkImportLogic.js';
     import { storeToRefs } from 'pinia';
@@ -12,9 +12,12 @@
     import { formatBytes } from '../lib/utils.js';
     import StatCards from '../components/features/Dashboard/StatCards.vue';
     import {
-        clearDismissedHealthItems,
-        dismissHealthItem,
-        readDismissedHealthItemIds,
+        addDismissedHealthItem,
+        clearLegacyDismissedHealthItemIds,
+        filterDismissedHealthItems,
+        isHealthItemDismissed,
+        normalizeDismissedHealthItemIds,
+        readLegacyDismissedHealthItemIds,
     } from '../utils/health-item-dismissal.js';
     import {
         getDashboardHealthItems,
@@ -75,9 +78,12 @@
         };
     });
 
-    // Items the user has ticked off. Mirrored into a ref so the list recomputes
-    // when the dismissal set changes (localStorage itself is not reactive).
-    const dismissedHealthItemIds = ref(readDismissedHealthItemIds());
+    // 已忽略的待处理项，直接派生自设置（settings.dismissedHealthItems）。
+    // 放在设置里而不是 localStorage，是为了跨设备同步。
+    // 用 computed 而不是本地 ref 镜像：保存成功后 settings 更新，列表自动重算。
+    const dismissedHealthItemIds = computed(() =>
+        normalizeDismissedHealthItemIds(settings.value?.dismissedHealthItems)
+    );
 
     const allHealthItems = computed(() =>
         getDashboardHealthItems({
@@ -89,7 +95,7 @@
     );
 
     const dashboardHealthItems = computed(() =>
-        allHealthItems.value.filter((item) => !dismissedHealthItemIds.value.includes(item.id))
+        filterDismissedHealthItems(allHealthItems.value, dismissedHealthItemIds.value)
     );
 
     const dismissedHealthItemsCount = computed(
@@ -197,25 +203,61 @@
     };
 
     // --- Health item dismissal ---
-    // Hiding an item only records a local preference; the underlying issue is
-    // untouched, so it comes back if the user restores it.
-    // 忽略状态只存在 localStorage：隐私模式 / 站点存储被禁用时写入会失败，
-    // 必须明确告知用户，否则表现为「点了没反应」且没有任何提示。
-    const dismissHealthItemById = (id) => {
-        const persisted = dismissHealthItem(id);
-        dismissedHealthItemIds.value = readDismissedHealthItemIds();
+    // 隐藏某个待处理项只是记一条偏好，底层问题不动，所以「全部恢复」能把它放回来。
+    // 这份偏好现在存在设置里并同步到服务端（跨设备生效），
+    // 写入失败必须明确告知用户，否则表现为「点了没反应」且没有任何提示。
+    // silent=true：忽略某个待处理项不该弹「设置已更新」，失败文案也用下面更贴切的两句。
+    // preferencesOnly=true：这个字段不影响节点处理，让服务端跳过清缓存与 TG 通知。
+    const persistDismissedHealthItems = async (ids) => {
+        try {
+            await dataStore.saveSettings(
+                { dismissedHealthItems: ids },
+                { silent: true, preferencesOnly: true }
+            );
+            return true;
+        } catch {
+            // saveSettings 已在控制台留下原因，这里只负责给用户一句能看懂的提示
+            return false;
+        }
+    };
+
+    const dismissHealthItemById = async (id) => {
+        const current = dismissedHealthItemIds.value;
+        // 已经忽略过就不必再往返一次服务端
+        if (isHealthItemDismissed(current, id)) return;
+        const persisted = await persistDismissedHealthItems(addDismissedHealthItem(current, id));
         if (!persisted) {
             showToast(t('dashboard.health.dismissFailed'), 'error');
         }
     };
 
-    const restoreDismissedHealthItems = () => {
-        const cleared = clearDismissedHealthItems();
-        dismissedHealthItemIds.value = readDismissedHealthItemIds();
-        if (!cleared) {
+    const restoreDismissedHealthItems = async () => {
+        if (dismissedHealthItemIds.value.length === 0) return;
+        const persisted = await persistDismissedHealthItems([]);
+        if (!persisted) {
             showToast(t('dashboard.health.restoreFailed'), 'error');
         }
     };
+
+    // 一次性迁移：旧版的忽略记录只存在本机 localStorage，不并进设置的话，
+    // 升级后用户之前忽略过的项会全部复活。
+    // 规则：只在服务端还没有这份列表时采用本机记录（bootstrap）；
+    // 服务端已有数据就以服务端为准 —— 它更新、且汇总了所有设备，
+    // 否则会把用户在别的设备上「全部恢复」掉的项又塞回来。
+    // 无论走哪条分支都要清掉旧键，否则每次启动都会重复迁移。
+    onMounted(async () => {
+        const legacy = readLegacyDismissedHealthItemIds();
+        if (legacy.length === 0) return;
+
+        if (dismissedHealthItemIds.value.length === 0) {
+            const persisted = await persistDismissedHealthItems(
+                normalizeDismissedHealthItemIds(legacy)
+            );
+            // 写不进去就先留着旧键，下次启动再试（清了就等于把用户的记录丢了）
+            if (!persisted) return;
+        }
+        clearLegacyDismissedHealthItemIds();
+    });
 
     // --- QRCode Modal Logic ---
     const QRCodeModal = defineAsyncComponent(() => import('../components/modals/QRCodeModal.vue'));

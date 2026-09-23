@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -8,6 +8,20 @@ const pushMock = vi.fn();
 
 const subscriptionsRef = { value: [] };
 const manualNodesRef = { value: [] };
+
+// 忽略列表现在随设置同步到服务端（useDataStore.saveSettings → POST /api/settings），
+// 所以要把 http 层挡掉，才能断言「确实发出了同步请求」以及「同步失败时的表现」。
+const { postMock } = vi.hoisted(() => ({ postMock: vi.fn() }));
+
+vi.mock('../../src/lib/http.js', () => ({
+    api: {
+        get: vi.fn(),
+        post: postMock,
+        put: vi.fn(),
+        delete: vi.fn(),
+    },
+    APIError: class APIError extends Error {},
+}));
 
 vi.mock('vue-router', async () => {
     const actual = await vi.importActual('vue-router');
@@ -67,6 +81,9 @@ const buildSub = (over = {}) => ({
     ...over,
 });
 
+// 忽略列表走「轻量偏好」保存：服务端据此跳过清节点缓存与 TG 通知。
+const PREFERENCES_SAVE_OPTIONS = { headers: { 'X-MiSub-Save-Scope': 'preferences' } };
+
 // One Pinia for the whole file, re-created per test and shared with `mount` so
 // the component sees exactly the state each test seeds.
 let pinia;
@@ -77,8 +94,11 @@ describe('DashboardView 待处理事项', () => {
         subscriptionsRef.value = [];
         pinia = createPinia();
         setActivePinia(pinia);
-        // Dismissals live in localStorage, so clear them between tests.
+        // 忽略列表已改为存在设置里，不再需要清 localStorage；
+        // 但一次性迁移会读旧键，所以要把它清干净，避免用例互相污染。
         localStorage.clear();
+        postMock.mockReset();
+        postMock.mockResolvedValue({ success: true });
         const dataStore = useDataStore();
         dataStore.profiles = [{ id: 'profile-1', name: '日常', enabled: true, customId: 'daily' }];
         useSettingsStore().setConfig({ mytoken: 'stable-token', profileToken: 'share-token' });
@@ -311,8 +331,10 @@ describe('DashboardView 待处理事项', () => {
     });
 
     // --- Dismissal ---
+    // 忽略列表存在 settings.dismissedHealthItems 里并同步到服务端，
+    // 所以这里不仅要断言「列表变了」，还要断言「发出了同步请求」。
 
-    it('hides a dismissed item from the list and reports the hidden count', async () => {
+    it('hides a dismissed item and syncs the new list to the server', async () => {
         subscriptionsRef.value = [
             buildSub({ id: 'failed', lastError: 'timeout' }),
             buildSub({ id: 'off', enabled: false }),
@@ -330,12 +352,19 @@ describe('DashboardView 待处理事项', () => {
             .findAll('[data-testid="health-item-dismiss"]')
             .find((b, idx) => wrapper.vm.visibleHealthItems[idx]?.id === 'auto-token');
         await dismiss.trigger('click');
+        await flushPromises();
 
         expect(wrapper.vm.dashboardHealthItems.map((i) => i.id)).not.toContain('auto-token');
         expect(wrapper.vm.dismissedHealthItemsCount).toBe(1);
         // The rest of the list is untouched.
         expect(wrapper.vm.dashboardHealthItems.map((i) => i.id)).toContain(
             'disabled-subscriptions'
+        );
+        // 关键：同步到设置接口，而不是只留在本机
+        expect(postMock).toHaveBeenCalledWith(
+            '/api/settings',
+            { dismissedHealthItems: ['auto-token'] },
+            PREFERENCES_SAVE_OPTIONS
         );
     });
 
@@ -349,36 +378,48 @@ describe('DashboardView 待处理事项', () => {
         expect(restore().exists()).toBe(false);
 
         await wrapper.find('[data-testid="health-item-dismiss"]').trigger('click');
+        await flushPromises();
         expect(restore().exists()).toBe(true);
         expect(restore().text()).toContain('1');
     });
 
-    it('brings a dismissed item back on restore', async () => {
+    it('brings a dismissed item back on restore and clears it on the server', async () => {
         subscriptionsRef.value = [buildSub({ id: 'failed', lastError: 'timeout' })];
 
         const wrapper = mountDashboard();
         await wrapper.vm.$nextTick();
 
         await wrapper.find('[data-testid="health-item-dismiss"]').trigger('click');
+        await flushPromises();
         expect(wrapper.vm.dashboardHealthItems.length).toBe(0);
         expect(wrapper.vm.hasHealthItems).toBe(false);
 
         await wrapper.find('[data-testid="health-items-restore"]').trigger('click');
+        await flushPromises();
 
         expect(wrapper.vm.dashboardHealthItems.length).toBe(1);
         expect(wrapper.vm.dismissedHealthItemsCount).toBe(0);
         expect(wrapper.find('[data-testid="health-items-restore"]').exists()).toBe(false);
+        expect(postMock).toHaveBeenLastCalledWith(
+            '/api/settings',
+            { dismissedHealthItems: [] },
+            PREFERENCES_SAVE_OPTIONS
+        );
     });
 
-    it('persists a dismissal across a remount', async () => {
+    it('keeps the dismissal in the settings store so a remount still hides it', async () => {
         subscriptionsRef.value = [buildSub({ id: 'failed', lastError: 'timeout' })];
 
         const first = mountDashboard();
         await first.vm.$nextTick();
         await first.find('[data-testid="health-item-dismiss"]').trigger('click');
+        await flushPromises();
         first.unmount();
 
-        // A fresh mount reads the same localStorage record.
+        // beforeEach 用的是 stable-token，所以列表里没有 auto-token，
+        // 首个可见项是失败订阅那一项。
+        expect(useSettingsStore().config.dismissedHealthItems).toEqual(['subscription-errors']);
+
         const second = mountDashboard();
         await second.vm.$nextTick();
 
@@ -386,32 +427,84 @@ describe('DashboardView 待处理事项', () => {
         expect(second.vm.dismissedHealthItemsCount).toBe(1);
     });
 
-    it('surfaces an error toast when the dismissal cannot be persisted', async () => {
+    it('surfaces an error toast and keeps the item when syncing fails', async () => {
         subscriptionsRef.value = [buildSub({ id: 'failed', lastError: 'timeout' })];
+        postMock.mockRejectedValueOnce(new Error('NetworkError'));
 
         const wrapper = mountDashboard();
         await wrapper.vm.$nextTick();
 
-        // 模拟隐私模式 / 存储被禁用：写入直接抛错。
-        vi.stubGlobal('localStorage', {
-            getItem: () => null,
-            setItem: () => {
-                throw new Error('QuotaExceededError');
-            },
-            removeItem: () => {},
-        });
-
         await wrapper.find('[data-testid="health-item-dismiss"]').trigger('click');
+        await flushPromises();
 
         const { toasts } = useToastStore();
+        // silent 模式下 saveSettings 自己不弹提示，由视图给出更贴切的文案
         expect(toasts).toHaveLength(1);
         expect(toasts[0].type).toBe('error');
         expect(toasts[0].message).toBe(messages['zh-CN'].dashboard.health.dismissFailed);
-        // 写入失败时条目必须留在列表里，不能假装成功。
+        // 同步失败时条目必须留在列表里，不能假装成功。
         expect(wrapper.vm.dashboardHealthItems.map((i) => i.id)).toContain('subscription-errors');
         expect(wrapper.vm.dismissedHealthItemsCount).toBe(0);
+    });
 
-        vi.unstubAllGlobals();
+    it('does not hit the server again for an already dismissed item', async () => {
+        subscriptionsRef.value = [buildSub({ id: 'failed', lastError: 'timeout' })];
+        useSettingsStore().setConfig({ dismissedHealthItems: ['auto-token'] });
+
+        const wrapper = mountDashboard();
+        await wrapper.vm.$nextTick();
+
+        await wrapper.vm.dismissHealthItemById('auto-token');
+        await flushPromises();
+
+        expect(postMock).not.toHaveBeenCalled();
+    });
+
+    // --- 旧数据一次性迁移（老用户的忽略记录只在 localStorage 里） ---
+
+    it('migrates legacy localStorage dismissals into the synced settings', async () => {
+        subscriptionsRef.value = [buildSub({ id: 'failed', lastError: 'timeout' })];
+        // 用列表里真实存在的 id，否则迁移虽然成功但看不到效果
+        localStorage.setItem('misub:dismissedHealthItems', JSON.stringify(['subscription-errors']));
+
+        const wrapper = mountDashboard();
+        await flushPromises();
+
+        expect(postMock).toHaveBeenCalledWith(
+            '/api/settings',
+            { dismissedHealthItems: ['subscription-errors'] },
+            PREFERENCES_SAVE_OPTIONS
+        );
+        expect(wrapper.vm.dismissedHealthItemsCount).toBe(1);
+        // 旧键要清掉，否则每次启动都会重复迁移
+        expect(localStorage.getItem('misub:dismissedHealthItems')).toBeNull();
+    });
+
+    it('does not resurrect legacy dismissals once the server already has a list', async () => {
+        subscriptionsRef.value = [buildSub({ id: 'failed', lastError: 'timeout' })];
+        localStorage.setItem('misub:dismissedHealthItems', JSON.stringify(['auto-token']));
+        useSettingsStore().setConfig({ dismissedHealthItems: ['low-traffic'] });
+
+        const wrapper = mountDashboard();
+        await flushPromises();
+
+        // 服务端那份为准：它更新、且汇总了所有设备。
+        // 否则会把用户在别的设备上「全部恢复」掉的项又塞回来。
+        expect(postMock).not.toHaveBeenCalled();
+        expect(wrapper.vm.dismissedHealthItemIds).toEqual(['low-traffic']);
+        expect(localStorage.getItem('misub:dismissedHealthItems')).toBeNull();
+    });
+
+    it('keeps the legacy record when the migration cannot be synced', async () => {
+        subscriptionsRef.value = [buildSub({ id: 'failed', lastError: 'timeout' })];
+        localStorage.setItem('misub:dismissedHealthItems', JSON.stringify(['auto-token']));
+        postMock.mockRejectedValueOnce(new Error('boom'));
+
+        mountDashboard();
+        await flushPromises();
+
+        // 写不进去就清掉等于把用户的记录丢了，所以留着下次启动再试。
+        expect(localStorage.getItem('misub:dismissedHealthItems')).not.toBeNull();
     });
 
     it('renders the dismissal copy in English without leaking keys', async () => {
@@ -421,6 +514,7 @@ describe('DashboardView 待处理事项', () => {
         await wrapper.vm.$nextTick();
 
         await wrapper.find('[data-testid="health-item-dismiss"]').trigger('click');
+        await flushPromises();
 
         const restore = wrapper.find('[data-testid="health-items-restore"]');
         expect(restore.text()).toContain('1 dismissed');

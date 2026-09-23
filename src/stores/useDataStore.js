@@ -184,10 +184,29 @@ export const useDataStore = defineStore('data', () => {
         }
     }
 
-    async function saveSettings(newSettings) {
+    /**
+     * 保存设置（服务端会做 { ...oldSettings, ...newSettings } 合并，
+     * 所以可以只传变化的那几个字段）。
+     * @param {Object} newSettings
+     * @param {{ silent?: boolean, preferencesOnly?: boolean }} [options]
+     *        - silent=true 时不弹任何提示，由调用方给出更贴切的文案
+     *          （例如「忽略待处理项」不该弹「设置已更新」）。
+     *        - preferencesOnly=true 表示这次只改界面偏好：服务端会跳过
+     *          「清空节点缓存」和「发 TG 设置更新通知」这两个副作用。
+     *          仅当本次载荷确实不影响节点处理时才可传 true。
+     *          （请求头名字与 functions/modules/api-handler.js 里的读取一一对应）
+     * @returns {Promise<boolean>} 成功时为 true；失败时**抛出**（沿用既有约定，
+     *          调用方自行 catch，静默模式下尤其需要）
+     */
+    async function saveSettings(newSettings, options = {}) {
+        const { silent = false, preferencesOnly = false } = options;
         editorStore.setLoading(true);
         try {
-            const result = await api.post('/api/settings', newSettings);
+            const result = await api.post(
+                '/api/settings',
+                newSettings,
+                preferencesOnly ? { headers: { 'X-MiSub-Save-Scope': 'preferences' } } : {}
+            );
 
             if (!result.success) {
                 throw new Error(result.message || t('store.saveSettingsFailed'));
@@ -195,13 +214,16 @@ export const useDataStore = defineStore('data', () => {
 
             settingsStore.updateConfig(newSettings);
             syncCachedConfig(settingsStore.config);
-            showToast(t('store.settingsUpdated'), 'success');
+            if (!silent) showToast(t('store.settingsUpdated'), 'success');
+            return true;
         } catch (error) {
             console.error('Failed to save settings:', error);
-            showToast(
-                t('store.saveSettingsFailedWithMessage', { message: error.message }),
-                'error'
-            );
+            if (!silent) {
+                showToast(
+                    t('store.saveSettingsFailedWithMessage', { message: error.message }),
+                    'error'
+                );
+            }
             throw error;
         } finally {
             editorStore.setLoading(false);
