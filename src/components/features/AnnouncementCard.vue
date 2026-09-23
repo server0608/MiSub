@@ -2,8 +2,11 @@
     import { ref, computed, watch } from 'vue';
     import DOMPurify from 'dompurify';
     import { useI18n } from '@/i18n/index.js';
+    import { useToastStore } from '@/stores/toast.js';
+    import { readRawPreference, writeRawPreference } from '@/utils/local-preference.js';
 
     const { t } = useI18n();
+    const { showToast } = useToastStore();
 
     const props = defineProps({
         announcement: {
@@ -42,21 +45,19 @@
     const dismiss = (e) => {
         e.stopPropagation();
         isVisible.value = false;
-        try {
-            if (props.announcement.updatedAt) {
-                localStorage.setItem(
-                    `announcement_dismissed_${props.announcement.updatedAt}`,
-                    'true'
-                );
-            }
-        } catch (e) {
-            console.warn('LocalStorage access failed', e);
+        if (props.announcement.updatedAt) {
+            // 写失败时必须告知用户：否则下次刷新公告又会出现，看起来像「忽略没生效」。
+            const persisted = writeRawPreference(
+                `announcement_dismissed_${props.announcement.updatedAt}`,
+                'true'
+            );
+            if (!persisted) showToast(t('errors.preferenceNotSaved'), 'error');
         }
     };
 
     const checkVisibility = () => {
         if (props.announcement?.dismissible && props.announcement?.updatedAt) {
-            const dismissed = localStorage.getItem(
+            const dismissed = readRawPreference(
                 `announcement_dismissed_${props.announcement.updatedAt}`
             );
             if (dismissed) {

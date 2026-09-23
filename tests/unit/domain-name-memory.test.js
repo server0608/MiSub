@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
     rememberDomainName,
     lookupDomainName,
@@ -16,6 +16,10 @@ import {
 describe('机场命名记忆（按域名）', () => {
     beforeEach(() => {
         clearDomainNameMemory();
+    });
+
+    afterEach(() => {
+        vi.unstubAllGlobals();
     });
 
     it('记住后可以按域名查回', () => {
@@ -59,5 +63,36 @@ describe('机场命名记忆（按域名）', () => {
         // 损坏后仍可正常写入
         rememberDomainName('d.com', 'D');
         expect(lookupDomainName('d.com')).toBe('D');
+    });
+
+    it('返回是否真正落盘，供调用方决定是否提示', () => {
+        expect(rememberDomainName('e.com', 'E')).toBe(true);
+        // 无需记忆的情况不算失败，避免调用方误报
+        expect(rememberDomainName('', 'E')).toBe(true);
+        expect(rememberDomainName('e.com', '   ')).toBe(true);
+        expect(clearDomainNameMemory()).toBe(true);
+    });
+
+    it('存储被禁用时返回 false 而不是静默吞掉', () => {
+        vi.stubGlobal('localStorage', {
+            getItem: () => null,
+            setItem: () => {
+                throw new Error('QuotaExceededError');
+            },
+            removeItem: () => {},
+        });
+
+        expect(rememberDomainName('f.com', 'F')).toBe(false);
+    });
+
+    it('删除未被真正执行时同样返回 false', () => {
+        // removeItem 是空实现 → 回读仍能读到 → 不能当成清除成功
+        vi.stubGlobal('localStorage', {
+            getItem: () => 'true',
+            setItem: () => {},
+            removeItem: () => {},
+        });
+
+        expect(clearDomainNameMemory()).toBe(false);
     });
 });

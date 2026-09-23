@@ -1463,6 +1463,7 @@ export const messages = {
             subscriptionFailed: '订阅更新失败，请稍后重试',
             batchFailed: '批量操作失败，已降级为逐个处理',
             generic: '操作失败，请稍后重试',
+            preferenceNotSaved: '当前浏览器禁用了本地存储，该设置无法长期保存',
         },
         common: {
             searchPlaceholder: '搜索...',
@@ -3167,6 +3168,8 @@ export const messages = {
             subscriptionFailed: 'Failed to update subscriptions. Please try again later.',
             batchFailed: 'Batch operation failed and fell back to processing items one by one.',
             generic: 'The operation failed. Please try again later.',
+            preferenceNotSaved:
+                'Local storage is disabled in this browser — this setting will not persist',
         },
         common: {
             searchPlaceholder: 'Search...',

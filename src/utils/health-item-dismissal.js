@@ -7,51 +7,37 @@
  *
  * 存储位置：localStorage（纯前端偏好，不进入后端数据，不影响导出/备份）。
  * 与 `domain-name-memory.js` 同属一类：只影响本机展示，不改变订阅数据。
+ * 读写与失败判定统一走 `local-preference.js`。
  */
+
+import { readPreference, removePreference, writePreference } from './local-preference.js';
 
 const STORAGE_KEY = 'misub:dismissedHealthItems';
 const MAX_ENTRIES = 100;
 
-/** 读取已忽略的条目 id 集合（容错：损坏时返回空集合） */
-function readAll() {
-    try {
-        if (typeof localStorage === 'undefined') return [];
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return [];
-        const parsed = JSON.parse(raw);
-        if (!Array.isArray(parsed)) {
-            // 被其它工具/旧版本写成对象或字符串时，这里只能退化为「无忽略记录」。
-            // 下一次写入会用合法的字符串数组覆盖它，从而自愈。
-            console.warn('[HealthItemDismissal] Ignoring non-array storage value');
-            return [];
-        }
-        return parsed.filter((id) => typeof id === 'string' && id);
-    } catch (error) {
-        console.warn('[HealthItemDismissal] Failed to read localStorage:', error);
+/** 校验载荷：必须是字符串数组，逐项过滤空值 */
+function normalizeIds(parsed) {
+    if (!Array.isArray(parsed)) {
+        // 被其它工具/旧版本写成对象或字符串时，这里只能退化为「无忽略记录」。
+        // 下一次写入会用合法的字符串数组覆盖它，从而自愈。
+        console.warn('[HealthItemDismissal] Ignoring non-array storage value');
         return [];
     }
+    return parsed.filter((id) => typeof id === 'string' && id);
+}
+
+/** 读取已忽略的条目 id 集合（容错：损坏时返回空集合） */
+function readAll() {
+    return readPreference(STORAGE_KEY, normalizeIds, []);
 }
 
 /**
  * 写入已忽略的 id 列表。
- * @returns {boolean} 是否写入成功（隐私模式 / 存储被禁用 / 配额满时为 false）
+ * @returns {boolean} 是否真正落盘（隐私模式 / 存储被禁用 / 静默丢失时为 false）
  */
 function writeAll(ids) {
-    try {
-        if (typeof localStorage === 'undefined') return false;
-        // 控制体积：超出上限时丢弃最早写入的条目
-        const trimmed = ids.slice(-MAX_ENTRIES);
-        const serialized = JSON.stringify(trimmed);
-        localStorage.setItem(STORAGE_KEY, serialized);
-        // 回读校验：Safari 无痕模式、部分隐私扩展下 setItem 不抛错但也不落盘。
-        // 只看「有没有抛异常」会把这种情况当成成功，用户就会遇到「刷新后回来」。
-        return localStorage.getItem(STORAGE_KEY) === serialized;
-    } catch (error) {
-        // 隐私模式、站点存储被禁用、配额为 0 都会走到这里。
-        // 返回值让调用方可以提示用户，而不是「点了没反应」。
-        console.warn('[HealthItemDismissal] Failed to write localStorage:', error);
-        return false;
-    }
+    // 控制体积：超出上限时丢弃最早写入的条目
+    return writePreference(STORAGE_KEY, ids.slice(-MAX_ENTRIES));
 }
 
 /** 某个待处理项是否已被忽略 */
@@ -97,15 +83,7 @@ export function restoreHealthItem(id) {
  * @returns {boolean} 是否清除成功
  */
 export function clearDismissedHealthItems() {
-    try {
-        if (typeof localStorage === 'undefined') return false;
-        localStorage.removeItem(STORAGE_KEY);
-        // 同样回读校验：删除也可能被静默忽略。
-        return localStorage.getItem(STORAGE_KEY) === null;
-    } catch (error) {
-        console.warn('[HealthItemDismissal] Failed to clear localStorage:', error);
-        return false;
-    }
+    return removePreference(STORAGE_KEY);
 }
 
 /**
