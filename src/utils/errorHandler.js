@@ -5,6 +5,7 @@
 
 import { t } from '../i18n/index.js';
 import { isChunkLoadError } from './chunk-reload.js';
+import { isNetworkErrorMessage } from './network-error.js';
 
 let toastHandler = null;
 let monitoringEndpoint = null;
@@ -202,7 +203,7 @@ class ErrorHandler {
         if (isChunkLoadError(message)) {
             return t('errors.chunkLoadFailed');
         }
-        if (message.includes('network') || message.includes('fetch')) {
+        if (isNetworkErrorMessage(message)) {
             return t('errors.network');
         }
         if (message.includes('Unauthorized') || message.includes('401')) {

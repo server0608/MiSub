@@ -5,6 +5,7 @@
     import { useDataStore } from '../../../stores/useDataStore.js';
     import { useManualNodes } from '../../../composables/useManualNodes.js';
     import { useI18n } from '../../../i18n/index.js';
+    import { isNetworkErrorMessage } from '../../../utils/network-error.js';
     import Modal from '../../forms/Modal.vue';
     import NodeFilters from './components/NodeFilters.vue';
     import NodeList from './components/NodeList.vue';
@@ -330,18 +331,18 @@
             // 重置页码
             currentPage.value = 1;
         } catch (err) {
-            // 提供更友好的错误信息
+            // 提供更友好的错误信息（文案与 useNodePreview.js 保持同一套 key）
             if (err instanceof APIError && err.status === 401) {
                 try {
                     await api.get('/api/data');
-                    error.value = '认证异常，请刷新页面后重试';
+                    error.value = t('nodePreview.authAbnormal');
                 } catch (testErr) {
-                    error.value = '认证失败，请重新登录后再试';
+                    error.value = t('nodePreview.authFailed');
                 }
-            } else if (err.message.includes('网络')) {
-                error.value = '网络连接失败，请检查网络连接';
+            } else if (isNetworkErrorMessage(err?.message)) {
+                error.value = t('nodePreview.networkFailed');
             } else {
-                error.value = err.message || '加载节点失败';
+                error.value = err.message || t('nodePreview.loadFailed');
             }
 
             allNodes.value = [];
