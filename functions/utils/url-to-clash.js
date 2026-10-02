@@ -264,6 +264,16 @@ function parseVlessUrl(url) {
             if (params.get('pbk')) realityOpts['public-key'] = params.get('pbk');
             if (params.get('sid')) realityOpts['short-id'] = params.get('sid');
             if (params.get('spx')) realityOpts['spider-x'] = params.get('spx');
+            const sxm =
+                params.get('support-x25519mlkem768') ||
+                params.get('support_x25519mlkem768') ||
+                params.get('sxm');
+            if (sxm === '0' || sxm === 'false') {
+                // 显式禁用
+            } else {
+                // 默认开启对 X25519-MLKEM768 混合密钥交换的支持（兼容新版 Xray-core / 3x-ui 服务端，且向下兼容旧版）
+                realityOpts['support-x25519mlkem768'] = true;
+            }
             if (Object.keys(realityOpts).length > 0) {
                 proxy['reality-opts'] = realityOpts;
             }
@@ -402,6 +412,28 @@ function parseTrojanUrl(url) {
         // [重要] dialer-proxy 链式代理
         if (params.get('dp')) {
             proxy['dialer-proxy'] = params.get('dp');
+        }
+
+        // Reality 配置 (支持 Trojan Reality)
+        const security = params.get('security');
+        if (security === 'reality') {
+            proxy.tls = true;
+            const realityOpts = {};
+            if (params.get('pbk')) realityOpts['public-key'] = params.get('pbk');
+            if (params.get('sid')) realityOpts['short-id'] = params.get('sid');
+            if (params.get('spx')) realityOpts['spider-x'] = params.get('spx');
+            const sxm =
+                params.get('support-x25519mlkem768') ||
+                params.get('support_x25519mlkem768') ||
+                params.get('sxm');
+            if (sxm === '0' || sxm === 'false') {
+                // 显式禁用
+            } else {
+                realityOpts['support-x25519mlkem768'] = true;
+            }
+            if (Object.keys(realityOpts).length > 0) {
+                proxy['reality-opts'] = realityOpts;
+            }
         }
 
         return proxy;
@@ -1511,6 +1543,14 @@ export function urlsToClashProxies(urls, options = {}) {
             }
 
             if (options.skipCertVerify) proxy['skip-cert-verify'] = true;
+
+            if (options.supportX25519mlkem768 !== undefined && proxy['reality-opts']) {
+                if (options.supportX25519mlkem768) {
+                    proxy['reality-opts']['support-x25519mlkem768'] = true;
+                } else {
+                    delete proxy['reality-opts']['support-x25519mlkem768'];
+                }
+            }
 
             // [智能增强] 注入元数据
             proxy.metadata = extractNodeMetadata(proxy.name);
