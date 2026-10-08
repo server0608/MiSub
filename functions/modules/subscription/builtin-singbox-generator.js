@@ -166,7 +166,7 @@ function buildOutbound(proxy) {
         const congestionControl =
             proxy['congestion-controller'] || proxy['congestion-control'] || proxy.congestion;
         if (congestionControl) outbound.congestion_control = congestionControl;
-        if (proxy['udp-relay-mode']) outbound.udp_relay_mode = proxy['udp-relay-mode'];
+        // sing-box TUIC schema has no udp_relay_mode field; do not emit Clash-only option.
         if (proxy['udp-over-stream'] !== undefined)
             outbound.udp_over_stream = Boolean(proxy['udp-over-stream']);
         if (proxy['zero-rtt-handshake'] !== undefined || proxy['reduce-rtt'] !== undefined) {
