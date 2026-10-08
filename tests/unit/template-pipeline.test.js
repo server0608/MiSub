@@ -298,10 +298,21 @@ MATCH,节点选择
     });
 
     it('omits Clash-only VMess udp_relay_mode from sing-box template output', () => {
+        const vmessConfig = btoa(JSON.stringify({
+            v: '2',
+            ps: 'VMessNode',
+            add: 'vmess.example.com',
+            port: '443',
+            id: 'safe-uuid',
+            aid: '0',
+            net: 'tcp',
+            type: 'none',
+            tls: '',
+        }));
         const rendered = renderSingboxFromIniTemplate(
             '[Proxy Group]\\nNode = select, VMessNode\\n[Rule]\\nMATCH,Node',
             {
-                proxies: [{ name: 'VMessNode', type: 'vmess', server: 'vmess.example.com', port: 443, uuid: 'safe-uuid', cipher: 'auto', 'udp-relay-mode': 'native' }],
+                nodeList: `vmess://${vmessConfig}`,
                 targetFormat: 'singbox',
             }
         );
