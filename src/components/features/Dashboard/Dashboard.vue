@@ -414,7 +414,11 @@
         if (!target) return;
         const subscription = subscriptions.value.find((s) => s.id === subscriptionId);
         if (!subscription) return;
-        updateSubscription(subscriptionId, { name: target });
+        // useSubscriptions.updateSubscription requires the complete subscription object.
+        updateSubscription({ ...subscription, name: target });
+        // Persist the confirmed name by airport root domain, matching the groups page.
+        const domain = inferAirportRootDomain(subscription.url);
+        if (domain) rememberDomainName(domain, target);
         showToast(t('subscriptions.nameApplied', { name: target }), 'success');
     };
 

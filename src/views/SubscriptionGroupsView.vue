@@ -276,6 +276,7 @@
             :show="showBulkImportModal"
             @update:show="showBulkImportModal = $event"
             @import="(txt, tag) => handleBulkImport(txt, tag)"
+            @files-imported="(nodes, group) => addNodesFromBulk(nodes, group)"
         />
 
         <NodePreviewModal

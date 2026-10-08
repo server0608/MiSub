@@ -111,10 +111,7 @@
         const root = inferAirportRootDomain(`https://${raw}`) || raw;
         const parts = root.split('.');
         let main = parts[0];
-        // 处理 com.cn / co.uk 这类多段后缀
-        if (parts.length >= 3 && ['com', 'net', 'org', 'gov', 'edu', 'co'].includes(parts[1])) {
-            main = parts[1];
-        }
+        // Root domain inference already excludes public-suffix labels (e.g. com.cn/co.uk).
         // 去掉带分隔符的常见拼接后缀（如 xxx-vpn），再首字母大写
         // 注意：不剥离「紧贴」的 vpn（gsafevpn 应保留为 Gsafevpn）
         const cleaned = main
@@ -149,7 +146,8 @@
         void nameMemoryVersion.value;
         const host = group?.host || '';
         if (host) {
-            const remembered = lookupDomainName(host);
+            const rootDomain = inferAirportRootDomain(`https://${host}`) || host;
+            const remembered = lookupDomainName(rootDomain);
             if (remembered) return remembered;
         }
         const detected = groupDetectedName(group);
