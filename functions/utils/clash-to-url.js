@@ -127,6 +127,25 @@ export function convertClashProxyToUrl(proxy) {
             if (proxy['dialer-proxy'])
                 params.push(`dp=${encodeURIComponent(proxy['dialer-proxy'])}`);
             if (proxy.skipCertVerify || proxy['skip-cert-verify']) params.push('allowInsecure=1');
+            const realityOpts = proxy['reality-opts'];
+            if (realityOpts) {
+                params.push('security=reality');
+                if (realityOpts['public-key'])
+                    params.push(`pbk=${encodeURIComponent(realityOpts['public-key'])}`);
+                if (realityOpts['short-id'])
+                    params.push(`sid=${encodeURIComponent(realityOpts['short-id'])}`);
+                if (realityOpts['spider-x'])
+                    params.push(`spx=${encodeURIComponent(realityOpts['spider-x'])}`);
+                const sxm =
+                    realityOpts['support-x25519mlkem768'] ?? realityOpts.support_x25519mlkem768;
+                if (sxm !== undefined) {
+                    if (sxm === false || sxm === 'false' || sxm === 0 || sxm === '0') {
+                        params.push('support-x25519mlkem768=false');
+                    } else if (sxm === true || sxm === 'true' || sxm === 1 || sxm === '1') {
+                        params.push('support-x25519mlkem768=true');
+                    }
+                }
+            }
             const query = params.length > 0 ? `?${params.join('&')}` : '';
             return `trojan://${encodeURIComponent(proxy.password)}@${server}:${port}${query}#${encodeURIComponent(name)}`;
         }
@@ -172,6 +191,15 @@ export function convertClashProxyToUrl(proxy) {
                     params.push(`sid=${encodeURIComponent(realityOpts['short-id'])}`);
                 if (realityOpts['spider-x'])
                     params.push(`spx=${encodeURIComponent(realityOpts['spider-x'])}`);
+                const sxm =
+                    realityOpts['support-x25519mlkem768'] ?? realityOpts.support_x25519mlkem768;
+                if (sxm !== undefined) {
+                    if (sxm === false || sxm === 'false' || sxm === 0 || sxm === '0') {
+                        params.push('support-x25519mlkem768=false');
+                    } else if (sxm === true || sxm === 'true' || sxm === 1 || sxm === '1') {
+                        params.push('support-x25519mlkem768=true');
+                    }
+                }
             } else if (proxy.tls) {
                 params.push('security=tls');
             }
