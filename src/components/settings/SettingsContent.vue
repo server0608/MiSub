@@ -46,6 +46,10 @@
             type: Boolean,
             default: false,
         },
+        restartCountdown: {
+            type: Number,
+            default: null,
+        },
         hasWhitespace: {
             type: Boolean,
             default: false,
@@ -82,7 +86,7 @@
         },
     });
 
-    const emit = defineEmits(['update:activeTab', 'save', 'migrate']);
+    const emit = defineEmits(['update:activeTab', 'save', 'migrate', 'reload-now']);
 
     const activeTabModel = computed({
         get: () => props.activeTab,
@@ -163,6 +167,22 @@
                 >
                     {{ t('settings.saveHint') }}
                 </div>
+            </div>
+
+            <div
+                v-if="restartCountdown !== null"
+                class="flex items-center justify-between gap-3 rounded-xl border border-amber-300/60 bg-amber-50/80 px-4 py-3 text-sm text-amber-900 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-100"
+                role="status"
+                aria-live="polite"
+            >
+                <span>{{ t('settings.reloadCountdown', { seconds: restartCountdown }) }}</span>
+                <button
+                    type="button"
+                    class="shrink-0 rounded-lg px-3 py-1.5 font-medium hover:bg-amber-100 dark:hover:bg-white/10"
+                    @click="$emit('reload-now')"
+                >
+                    {{ t('settings.reloadNow') }}
+                </button>
             </div>
 
             <BasicSettings

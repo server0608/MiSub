@@ -269,6 +269,9 @@
                                 highlightedFocusId === 'setting-mytoken',
                         }"
                     />
+                    <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                        {{ t('settings.subscriptionTokenRotationHint') }}
+                    </p>
                 </div>
                 <div>
                     <Input

@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue';
+import { ref, computed, onUnmounted, getCurrentInstance } from 'vue';
 import { useToastStore } from '../stores/toast.js';
 import { DEFAULT_SETTINGS } from '../constants/default-settings.js';
 import { fetchSettings, saveSettings, resetSettings } from '../lib/api.js';
@@ -46,6 +46,19 @@ export function useSettingsLogic() {
     const isLoading = ref(false);
     const isSaving = ref(false);
     const showMigrationModal = ref(false);
+    const restartCountdown = ref(null);
+    let reloadTimer = null;
+
+    const clearReloadTimer = () => {
+        if (reloadTimer !== null) {
+            clearInterval(reloadTimer);
+            reloadTimer = null;
+        }
+    };
+
+    if (getCurrentInstance()) {
+        onUnmounted(clearReloadTimer);
+    }
 
     // 嵌套配置对象
     const disguiseConfig = ref({
@@ -148,7 +161,15 @@ export function useSettingsLogic() {
             const result = await saveSettings(settingsToSave);
             if (result.success) {
                 showToast(t('settings.savedReloading'), 'success');
-                setTimeout(() => window.location.reload(), 1500);
+                clearReloadTimer();
+                restartCountdown.value = 3;
+                reloadTimer = setInterval(() => {
+                    restartCountdown.value -= 1;
+                    if (restartCountdown.value <= 0) {
+                        clearReloadTimer();
+                        window.location.reload();
+                    }
+                }, 1000);
                 return true;
             } else {
                 throw new Error(result.error || t('settings.saveFailed'));
@@ -212,6 +233,7 @@ export function useSettingsLogic() {
         isLoading,
         isSaving,
         showMigrationModal,
+        restartCountdown,
         hasWhitespace,
         isStorageTypeValid,
         loadSettings,

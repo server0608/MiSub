@@ -19,6 +19,7 @@
         isLoading,
         isSaving,
         showMigrationModal,
+        restartCountdown,
         hasWhitespace,
         isStorageTypeValid,
         loadSettings,
@@ -115,6 +116,7 @@
             :disguise-config="disguiseConfig"
             :is-loading="isLoading"
             :is-saving="isSaving"
+            :restart-countdown="restartCountdown"
             :has-whitespace="hasWhitespace"
             :is-storage-type-valid="isStorageTypeValid"
             :highlighted-focus-id="highlightedFocusId"
@@ -123,6 +125,7 @@
             :handle-reset="handleReset"
             layout-class="h-full"
             @save="handleSave"
+            @reload-now="() => window.location.reload()"
             @migrate="handleOpenMigrationModal"
         />
 

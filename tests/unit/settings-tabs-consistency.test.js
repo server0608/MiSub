@@ -50,6 +50,20 @@ describe('设置页信息架构一致性', () => {
         expect(missing, `currentTabLabel 缺少这些分支：${missing.join(', ')}`).toEqual([]);
     });
 
+    it('保存倒计时与立即刷新入口由共享内容组件提供并连接到两个容器', async () => {
+        const content = await readSource(CONTENT);
+        expect(content).toContain('restartCountdown !== null');
+        expect(content).toContain("t('settings.reloadCountdown'");
+        expect(content).toContain("t('settings.reloadNow'");
+        expect(content).toContain('@click="$emit(\'reload-now\')"');
+
+        for (const { name, path } of CONTAINERS) {
+            const source = await readSource(path);
+            expect(source, `${name} 未传入刷新倒计时`).toContain(':restart-countdown="restartCountdown"');
+            expect(source, `${name} 未监听立即刷新事件`).toContain('@reload-now=');
+        }
+    });
+
     it('两个容器都复用共享内容组件，而不是各自再实现一份', async () => {
         for (const { name, path } of CONTAINERS) {
             const source = await readSource(path);

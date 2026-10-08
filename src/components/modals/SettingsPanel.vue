@@ -10,6 +10,7 @@
         isLoading,
         isSaving,
         showMigrationModal,
+        restartCountdown,
         hasWhitespace,
         isStorageTypeValid,
         loadSettings,
@@ -45,6 +46,7 @@
             :disguise-config="disguiseConfig"
             :is-loading="isLoading"
             :is-saving="isSaving"
+            :restart-countdown="restartCountdown"
             :has-whitespace="hasWhitespace"
             :is-storage-type-valid="isStorageTypeValid"
             :export-backup="exportBackup"
@@ -53,6 +55,7 @@
             always-show-header
             layout-class="h-full !shadow-none !border-0 !rounded-none !bg-transparent"
             @save="handleSave"
+            @reload-now="() => window.location.reload()"
             @migrate="showMigrationModal = true"
         />
 

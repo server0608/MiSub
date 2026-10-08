@@ -3,7 +3,14 @@ import { createPinia, setActivePinia } from 'pinia';
 import { reactive } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('../../src/components/modals/LogModal.vue', () => ({ default: { template: '<div />' } }));
+vi.mock('../../src/components/modals/ProfileModal.vue', () => ({ default: { template: '<div />' } }));
 vi.mock('../../src/components/modals/NodePreview/NodePreviewModal.vue', () => ({ default: { template: '<div />' } }));
+vi.mock('../../src/components/profiles/ProfilePanel.vue', () => ({ default: { template: '<div />' } }));
+vi.mock('../../src/utils/network-error.js', () => ({
+    showNetworkError: vi.fn(),
+    isNetworkError: vi.fn(() => false),
+}));
 vi.mock('../../src/components/modals/QRCodeModal.vue', () => ({ default: { template: '<div />' } }));
 vi.mock('../../src/components/modals/CopyLinkModal.vue', () => ({ default: { template: '<div />' } }));
 
