@@ -216,6 +216,7 @@ export function generateBuiltinClashConfig(nodeList, options = {}) {
         const dnsConfig = resolveSafeDnsConfig(options.customDnsOverride || '', {
             mode: options.dnsMode,
             proxyGroup: DNS_PROXY_GROUP,
+            subscriptionDnsPolicies: options.subscriptionDnsPolicies || [],
         });
 
         const config = {
