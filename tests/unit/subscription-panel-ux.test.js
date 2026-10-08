@@ -103,6 +103,42 @@ describe('SubscriptionPanel UX', () => {
         expect(wrapper.emitted('import')).toHaveLength(1);
     });
 
+    it('distinguishes search with no matches from an actually empty list', async () => {
+        const wrapper = mountPanel({
+            searchable: true,
+            searchQuery: 'missing',
+            subscriptions: [{ id: 's1', name: '机场一', url: 'https://one.test/sub' }],
+            paginatedSubscriptions: [],
+            filteredCount: 0,
+        });
+
+        expect(wrapper.text()).toContain('没有找到匹配的机场订阅。');
+        expect(wrapper.get('[data-testid="subscription-no-search-results"]').exists()).toBe(true);
+        expect(wrapper.get('[data-testid="clear-subscription-search"]').exists()).toBe(true);
+        await wrapper.get('[data-testid="clear-subscription-search"]').trigger('click');
+        expect(wrapper.emitted('updateSearch')).toEqual([['']]);
+    });
+
+    it('renders paginated results inside collapsed site groups', () => {
+        const wrapper = mountPanel({
+            subscriptions: [
+                { id: 'a1', name: 'A1', url: 'https://sub.example.com/1' },
+                { id: 'a2', name: 'A2', url: 'https://sub.example.com/2' },
+                { id: 'b1', name: 'B1', url: 'https://other.test/1' },
+            ],
+            paginatedSubscriptions: [
+                { id: 'a1', name: 'A1', url: 'https://sub.example.com/1' },
+                { id: 'a2', name: 'A2', url: 'https://sub.example.com/2' },
+            ],
+        });
+
+        expect(wrapper.text()).toContain('A1');
+        expect(wrapper.text()).toContain('A2');
+        expect(wrapper.text()).not.toContain('B1');
+        expect(wrapper.findAll('.card-stub')).toHaveLength(2);
+        expect(wrapper.get('button[aria-expanded="true"]').exists()).toBe(true);
+    });
+
     it('uses a concise list search hint that fits mobile screens', () => {
         const wrapper = mountPanel({ searchable: true });
         const search = wrapper.get('[data-testid="subscription-search"]');

@@ -119,7 +119,9 @@
                     />
                 </span>
 
-                <span class="text-[10px] font-medium tracking-tight">{{ t(item.key) }}</span>
+                <span
+                    class="text-[clamp(0.625rem,2.6vw,0.75rem)] font-medium tracking-tight leading-tight text-center"
+                >{{ t(item.key) }}</span>
             </router-link>
         </div>
     </nav>

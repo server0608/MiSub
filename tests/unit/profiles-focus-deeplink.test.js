@@ -1,7 +1,11 @@
 import { mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import { reactive } from 'vue';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+vi.mock('../../src/components/modals/NodePreview/NodePreviewModal.vue', () => ({ default: { template: '<div />' } }));
+vi.mock('../../src/components/modals/QRCodeModal.vue', () => ({ default: { template: '<div />' } }));
+vi.mock('../../src/components/modals/CopyLinkModal.vue', () => ({ default: { template: '<div />' } }));
 
 const route = reactive({ query: {}, path: '/dashboard/settings' });
 
@@ -19,9 +23,13 @@ import { createI18n } from '../../src/i18n/index.js';
 import { useDataStore } from '../../src/stores/useDataStore.js';
 
 const scrollSpy = vi.fn();
+const mountedWrappers = [];
+afterEach(() => {
+    mountedWrappers.splice(0).forEach((wrapper) => wrapper.unmount());
+});
 
 function mountView() {
-    return mount(MySubscriptionsView, {
+    const wrapper = mount(MySubscriptionsView, {
         global: {
             plugins: [createPinia(), createI18n({ initialLocale: 'zh-CN' })],
             stubs: {
@@ -35,6 +43,8 @@ function mountView() {
             },
         },
     });
+    mountedWrappers.push(wrapper);
+    return wrapper;
 }
 
 describe('MySubscriptionsView 深链 focus (?focus=profiles)', () => {

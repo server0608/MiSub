@@ -24,6 +24,9 @@ export function useSubscriptions(markDirty) {
     });
 
     const searchQuery = ref('');
+    const refreshError = ref(false);
+    const lastRefreshAt = ref(null);
+    const isRefreshing = ref(false);
     const filteredSubscriptions = computed(() => {
         const query = searchQuery.value.trim().toLowerCase();
         if (!query) return subscriptions.value;
@@ -77,8 +80,14 @@ export function useSubscriptions(markDirty) {
         return filteredSubscriptions.value.slice(start, end);
     });
 
-    watch(searchQuery, () => {
+    watch([searchQuery, () => filteredSubscriptions.value.length], () => {
         subsCurrentPage.value = 1;
+    });
+
+    watch([filteredSubscriptions, subsTotalPages], () => {
+        if (subsCurrentPage.value > subsTotalPages.value) {
+            subsCurrentPage.value = Math.max(1, subsTotalPages.value);
+        }
     });
 
     function changeSubsPage(page) {
@@ -323,6 +332,8 @@ export function useSubscriptions(markDirty) {
             return;
         }
 
+        isRefreshing.value = true;
+        refreshError.value = false;
         subsToUpdate.forEach((sub) => {
             sub.isUpdating = true;
         });
@@ -363,6 +374,7 @@ export function useSubscriptions(markDirty) {
                 }
 
                 const failedCount = subsToUpdate.length - successCount;
+                refreshError.value = failedCount > 0;
                 showToast(
                     t('subscriptions.refreshDone', {
                         success: successCount,
@@ -379,11 +391,13 @@ export function useSubscriptions(markDirty) {
                     }),
                     'error'
                 );
+                refreshError.value = true;
                 for (const sub of subsToUpdate) {
                     await handleUpdateNodeCount(sub.id);
                 }
             }
         } catch (error) {
+            refreshError.value = true;
             handleError(error, 'Batch Subscription Update Error', {
                 subscriptionCount: subsToUpdate.length,
             });
@@ -392,6 +406,8 @@ export function useSubscriptions(markDirty) {
                 await handleUpdateNodeCount(sub.id);
             }
         } finally {
+            lastRefreshAt.value = new Date().toISOString();
+            isRefreshing.value = false;
             subsToUpdate.forEach((sub) => {
                 sub.isUpdating = false;
             });
@@ -494,8 +510,12 @@ export function useSubscriptions(markDirty) {
 
     return {
         subscriptions,
-        filteredSubscriptions,
         searchQuery,
+        filteredSubscriptions,
+        filteredCount: computed(() => filteredSubscriptions.value.length),
+        isRefreshing,
+        refreshError,
+        lastRefreshAt,
         subsCurrentPage,
         subsTotalPages,
         paginatedSubscriptions,

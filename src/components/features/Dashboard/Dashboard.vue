@@ -116,6 +116,12 @@
 
     const {
         subscriptions,
+        searchQuery: subscriptionSearchQuery,
+        filteredSubscriptions: filteredSubscriptionList,
+        filteredCount: filteredSubscriptionCount,
+        isRefreshing: isRefreshingSubscriptions,
+        refreshError: subscriptionRefreshError,
+        lastRefreshAt: lastSubscriptionRefreshAt,
         subsCurrentPage,
         subsTotalPages,
         paginatedSubscriptions,
@@ -491,11 +497,18 @@
             <div class="space-y-8 lg:space-y-9 xl:col-span-2">
                 <!-- Subscription Panel -->
                 <SubscriptionPanel
+                    searchable
+                    :search-query="subscriptionSearchQuery"
+                    :filtered-count="filteredSubscriptionCount"
+                    :is-refreshing="isRefreshingSubscriptions"
+                    :refresh-error="subscriptionRefreshError"
+                    :last-refresh-at="lastSubscriptionRefreshAt"
                     :subscriptions="subscriptions"
                     :paginated-subscriptions="paginatedSubscriptions"
                     :current-page="subsCurrentPage"
                     :total-pages="subsTotalPages"
                     :is-sorting="isSortingSubs"
+                    @update-search="(query) => (subscriptionSearchQuery = query)"
                     @add="handleAddSubscription"
                     @delete="handleDeleteSubscriptionWithCleanup"
                     @change-page="changeSubsPage"
