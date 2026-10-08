@@ -297,6 +297,19 @@ MATCH,节点选择
         expect(model.groups.some((group) => group.name === '🚀 节点选择')).toBe(true);
     });
 
+    it('omits Clash-only VMess udp_relay_mode from sing-box template output', () => {
+        const rendered = renderSingboxFromIniTemplate(
+            '[Proxy Group]\\nNode = select, VMessNode\\n[Rule]\\nMATCH,Node',
+            {
+                proxies: [{ name: 'VMessNode', type: 'vmess', server: 'vmess.example.com', port: 443, uuid: 'safe-uuid', cipher: 'auto', 'udp-relay-mode': 'native' }],
+                targetFormat: 'singbox',
+            }
+        );
+        const parsed = JSON.parse(rendered);
+        const vmess = parsed.outbounds.find((outbound) => outbound.tag === 'VMessNode');
+        expect(vmess?.udp_relay_mode).toBeUndefined();
+    });
+
     it('omits Clash-only TUIC udp_relay_mode from sing-box template output', () => {
         const rendered = renderSingboxFromIniTemplate(
             '[Proxy Group]\\nNode = select, TUICNode\\n[Rule]\\nMATCH,Node',
