@@ -215,6 +215,14 @@ export function resolveSafeDnsConfig(raw, options = {}) {
     dns['nameserver-policy'] = {
         'geosite:private': [...policy.domestic],
         'geosite:cn': [...policy.domestic],
+        ...options.subscriptionDnsPolicies?.reduce((acc, item) => {
+            if (item && item.policy && isObject(item.policy)) {
+                Object.assign(acc, item.policy);
+            } else if (item && item.domains && item.nameservers) {
+                acc[item.domains] = item.nameservers;
+            }
+            return acc;
+        }, {}),
         'geosite:geolocation-!cn': foreign.map((value) => withProxy(value, proxyGroup)),
     };
     dns['proxy-server-nameserver'] = [...policy.domestic];
