@@ -1244,10 +1244,10 @@ function parseAnytlsUrl(url) {
  * @param {string} url - HTTPS URL
  * @returns {Object|null} Clash 代理对象
  */
-function parseHttpsUrl(url) {
+function parseHttpsUrl(url, isTls = true) {
     try {
         // https://username:password@server:port?params#name
-        const body = url.substring(8);
+        const body = url.substring(isTls ? 8 : 7);
         const atIndex = body.indexOf('@');
         if (atIndex === -1) return null;
 
@@ -1278,7 +1278,7 @@ function parseHttpsUrl(url) {
 
         const proxy = {
             name: name || `HTTPS-${server}`,
-            type: 'https',
+            type: isTls ? 'https' : 'http',
             server,
             port,
             username,
@@ -1502,6 +1502,8 @@ export function urlToClashProxy(url) {
         return parseAnytlsUrl(url);
     } else if (lowerUrl.startsWith('https://')) {
         return parseHttpsUrl(url);
+    } else if (lowerUrl.startsWith('http://')) {
+        return parseHttpsUrl(url, false);
     } else if (lowerUrl.startsWith('socks5://')) {
         return parseSocks5Url(url);
     }

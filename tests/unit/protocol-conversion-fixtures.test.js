@@ -37,6 +37,17 @@ const base64UrlSafeEncode = (value) =>
         .replace(/=+$/g, '');
 
 describe('protocol conversion fixtures', () => {
+    it('parses plain HTTP proxy URIs as HTTP proxies with credentials', () => {
+        expectParseOnly('http://alice:p%40ss%3Aword@proxy.example.com:8080#plain-http', {
+            name: 'plain-http',
+            type: 'http',
+            server: 'proxy.example.com',
+            port: 8080,
+            username: 'alice',
+            password: 'p@ss:word',
+        });
+    });
+
     it('preserves common proxy fields across Clash proxy -> URL -> Clash proxy round trips', () => {
         const fixtures = [
             {
@@ -686,8 +697,17 @@ proxies:
             for (const part of fixture.requiredParts) {
                 expect(url).toContain(part);
             }
-            expect(urlToClashProxy(url)).toBeNull();
-            expect(urlsToClashProxies([url])).toEqual([]);
+            if (fixture.proxy.type === 'http') {
+                expect(urlToClashProxy(url)).toMatchObject({
+                    type: 'http',
+                    username: 'user',
+                    password: 'p@ss:word',
+                });
+                expect(urlsToClashProxies([url])).toHaveLength(1);
+            } else {
+                expect(urlToClashProxy(url)).toBeNull();
+                expect(urlsToClashProxies([url])).toEqual([]);
+            }
         }
     });
 });
