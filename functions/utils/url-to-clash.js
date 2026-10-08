@@ -95,6 +95,10 @@ function parseHostPort(hostPort) {
     }
 
     const parts = hostPort.split(':');
+    if (parts.length > 2 && parts[0] === '') {
+        const port = parseInt(parts[parts.length - 1]) || 443;
+        return { server: parts.slice(0, -1).join(':'), port };
+    }
     return {
         server: parts[0],
         port: parseInt(parts[1]) || 443,
@@ -124,6 +128,11 @@ function parseVlessUrl(url) {
             serverPart = serverPart.substring(0, queryIndex);
         } else if (hashIndex !== -1) {
             serverPart = serverPart.substring(0, hashIndex);
+        }
+
+        if (/^[0-9a-f:]+$/i.test(serverPart) && serverPart.split(':').length > 2) {
+            const lastColon = serverPart.lastIndexOf(':');
+            serverPart = `[${serverPart.slice(0, lastColon)}]:${serverPart.slice(lastColon + 1)}`;
         }
 
         const { server, port } = parseHostPort(serverPart);

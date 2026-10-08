@@ -37,6 +37,24 @@ const base64UrlSafeEncode = (value) =>
         .replace(/=+$/g, '');
 
 describe('protocol conversion fixtures', () => {
+    it('brackets bare IPv6 servers in Clash proxy URLs and round-trips them', () => {
+        expectRoundTrip(
+            {
+                name: 'IPv6 VLESS',
+                type: 'vless',
+                server: '2001:db8::1',
+                port: 443,
+                uuid: '00000000-0000-0000-0000-000000000001',
+            },
+            {
+                name: 'IPv6 VLESS',
+                type: 'vless',
+                server: '2001:db8::1',
+                port: 443,
+            }
+        );
+    });
+
     it('parses plain HTTP proxy URIs as HTTP proxies with credentials', () => {
         expectParseOnly('http://alice:p%40ss%3Aword@proxy.example.com:8080#plain-http', {
             name: 'plain-http',
