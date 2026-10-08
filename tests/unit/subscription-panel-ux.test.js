@@ -119,7 +119,7 @@ describe('SubscriptionPanel UX', () => {
         expect(wrapper.emitted('updateSearch')).toEqual([['']]);
     });
 
-    it('renders paginated results inside collapsed site groups', () => {
+    it('renders paginated results inside collapsed site groups', async () => {
         const wrapper = mountPanel({
             subscriptions: [
                 { id: 'a1', name: 'A1', url: 'https://sub.example.com/1' },
@@ -136,6 +136,8 @@ describe('SubscriptionPanel UX', () => {
         expect(wrapper.text()).toContain('A2');
         expect(wrapper.text()).not.toContain('B1');
         expect(wrapper.findAll('.card-stub')).toHaveLength(2);
+        expect(wrapper.get('button[aria-expanded="false"]').exists()).toBe(true);
+        await wrapper.get('button[aria-expanded="false"]').trigger('click');
         expect(wrapper.get('button[aria-expanded="true"]').exists()).toBe(true);
     });
 

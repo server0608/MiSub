@@ -54,6 +54,10 @@ describe('订阅源按站点折叠', () => {
         // 三张卡片都在（折叠但已渲染），且出现数量徽标 3
         expect(wrapper.findAll('.stub-card')).toHaveLength(3);
         expect(wrapper.html()).toContain('>3<');
+        const groupToggle = wrapper.find('[aria-expanded="false"]');
+        expect(groupToggle.exists()).toBe(true);
+        expect(groupToggle.attributes('aria-expanded')).toBe('false');
+        expect(wrapper.findAll('.stub-card')[0].element.parentElement.parentElement.style.display).toBe('none');
         // 有可折叠分组时会出现「折叠全部」
         expect(wrapper.html()).toMatch(/折叠全部|Collapse all/);
     });

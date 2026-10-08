@@ -1,5 +1,5 @@
 <script setup>
-    import { computed, ref, nextTick } from 'vue';
+    import { computed, ref, nextTick, watch } from 'vue';
     import draggable from 'vuedraggable';
     import Card from '../ui/Card.vue';
     import MoreActionsMenu from '@/components/shared/MoreActionsMenu.vue';
@@ -215,6 +215,23 @@
     };
 
     const isGroupCollapsed = (key) => collapsedGroups.value.has(key);
+
+    // 默认收起同站点的多订阅组；新出现的站点也自动收起，已手动展开的组保持展开。
+    watch(
+        collapsibleGroups,
+        (groups) => {
+            const next = new Set(collapsedGroups.value);
+            groups.forEach((group) => {
+                if (!next.has(group.key)) next.add(group.key);
+            });
+            const visibleKeys = new Set(groups.map((group) => group.key));
+            for (const key of next) {
+                if (!visibleKeys.has(key)) next.delete(key);
+            }
+            collapsedGroups.value = next;
+        },
+        { immediate: true }
+    );
 
     const isGrouped = computed(() => collapsibleGroups.value.length > 0);
 
