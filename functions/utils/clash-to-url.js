@@ -228,6 +228,8 @@ export function convertClashProxyToUrl(proxy) {
             if (sni !== undefined) params.push(`sni=${encodeURIComponent(sni)}`);
             if (proxy.skipCertVerify || proxy['skip-cert-verify']) params.push('insecure=1');
             if (proxy.ports !== undefined) params.push(`ports=${encodeURIComponent(proxy.ports)}`);
+            if (proxy['hop-interval'] !== undefined)
+                params.push(`hop-interval=${encodeURIComponent(proxy['hop-interval'])}`);
             if (proxy.up !== undefined || proxy['up-mbps'] !== undefined)
                 params.push(`up=${encodeURIComponent(proxy.up ?? proxy['up-mbps'])}`);
             if (proxy.down !== undefined || proxy['down-mbps'] !== undefined)

@@ -613,6 +613,33 @@ proxies:
         });
     });
 
+    it('preserves Hysteria2 port hopping through URL and builtin Clash output', () => {
+        const clashConfig = `
+proxies:
+  - name: HY2 hopping
+    type: hysteria2
+    server: hy2.example.com
+    port: 443
+    password: secret
+    ports: 20000-30000
+    hop-interval: 30
+`;
+
+        const nodes = extractValidNodes(clashConfig);
+        expect(nodes).toHaveLength(1);
+        expect(nodes[0]).toContain('ports=20000-30000');
+        expect(nodes[0]).toContain('hop-interval=30');
+
+        const fullConfig = yaml.load(
+            generateBuiltinClashConfig(nodes.join('\n'), { addFlagEmoji: false })
+        );
+        expect(fullConfig.proxies[0]).toMatchObject({
+            type: 'hysteria2',
+            ports: '20000-30000',
+            'hop-interval': '30',
+        });
+    });
+
     it('preserves Hysteria2 options from Clash YAML through URL and builtin Clash output', () => {
         const clashConfig = `
 proxies:
