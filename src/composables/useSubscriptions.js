@@ -7,6 +7,7 @@ import { fetchNodeCount, batchUpdateNodes } from '../lib/api.js';
 import { handleError } from '../utils/errorHandler.js';
 import { TIMING } from '../constants/timing.js';
 import { t } from '../i18n/index.js';
+import { inferAirportRootDomain } from '../utils/airport-domain.js';
 
 const isDev = import.meta.env.DEV;
 
@@ -50,8 +51,28 @@ export function useSubscriptions(markDirty) {
 
     const subsCurrentPage = ref(1);
     const subsItemsPerPage = 6;
-
     const enabledSubscriptions = computed(() => subscriptions.value.filter((s) => s.enabled));
+
+    /** 保持同一站点订阅相邻，避免分页后多个机场组交错出现。 */
+    const orderedFilteredSubscriptions = computed(() => {
+        const filteredIds = new Set(filteredSubscriptions.value.map((sub) => sub.id));
+        const ordered = [];
+        const groups = new Map();
+        (allSubscriptions.value || []).forEach((sub) => {
+            if (!filteredIds.has(sub.id) || !/^https?:\/\//i.test(String(sub.url || ''))) return;
+            const root = inferAirportRootDomain(sub.url);
+            const key = root ? `site:${root}` : `id:${sub.id}`;
+            if (!groups.has(key)) groups.set(key, []);
+            groups.get(key).push(sub);
+        });
+        const grouped = [...groups.entries()].sort(([, left], [, right]) => {
+            const leftMerged = left.length > 1 ? 1 : 0;
+            const rightMerged = right.length > 1 ? 1 : 0;
+            return rightMerged - leftMerged;
+        });
+        grouped.forEach(([, items]) => ordered.push(...items));
+        return ordered;
+    });
 
     const totalRemainingTraffic = computed(() => {
         const REASONABLE_TRAFFIC_LIMIT_BYTES = 10 * 1024 * 1024 * 1024 * 1024 * 1024; // 10 PB in bytes
@@ -72,12 +93,12 @@ export function useSubscriptions(markDirty) {
     });
 
     const subsTotalPages = computed(() =>
-        Math.ceil(filteredSubscriptions.value.length / subsItemsPerPage)
+        Math.ceil(orderedFilteredSubscriptions.value.length / subsItemsPerPage)
     );
     const paginatedSubscriptions = computed(() => {
         const start = (subsCurrentPage.value - 1) * subsItemsPerPage;
         const end = start + subsItemsPerPage;
-        return filteredSubscriptions.value.slice(start, end);
+        return orderedFilteredSubscriptions.value.slice(start, end);
     });
 
     watch([searchQuery, () => filteredSubscriptions.value.length], () => {
