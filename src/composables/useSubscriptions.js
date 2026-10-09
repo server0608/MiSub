@@ -7,7 +7,7 @@ import { fetchNodeCount, batchUpdateNodes } from '../lib/api.js';
 import { handleError } from '../utils/errorHandler.js';
 import { TIMING } from '../constants/timing.js';
 import { t } from '../i18n/index.js';
-import { inferAirportRootDomain } from '../utils/airport-domain.js';
+import { getAirportIdentityKey } from '../utils/airport-identity.js';
 
 const isDev = import.meta.env.DEV;
 
@@ -60,8 +60,7 @@ export function useSubscriptions(markDirty) {
         const groups = new Map();
         (allSubscriptions.value || []).forEach((sub) => {
             if (!filteredIds.has(sub.id) || !/^https?:\/\//i.test(String(sub.url || ''))) return;
-            const root = inferAirportRootDomain(sub.url);
-            const key = root ? `site:${root}` : `id:${sub.id}`;
+            const key = getAirportIdentityKey(sub);
             if (!groups.has(key)) groups.set(key, []);
             groups.get(key).push(sub);
         });

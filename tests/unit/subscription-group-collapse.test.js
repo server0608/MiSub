@@ -125,7 +125,9 @@ describe('订阅源按站点折叠', () => {
         expect(wrapper.findAll('[aria-expanded="false"]')).toHaveLength(1);
         expect(wrapper.findAll('.stub-card')).toHaveLength(3);
         expect(wrapper.html()).toContain('Project a');
-        expect(wrapper.find('[aria-expanded="false"]').element.closest('.rounded-xl').textContent).toContain('2');
+        expect(
+            wrapper.find('[aria-expanded="false"]').element.closest('.rounded-xl').textContent
+        ).toContain('2');
     });
 
     it('组标题可以展开/收起，且显示数量及组重命名控件', async () => {
@@ -136,11 +138,66 @@ describe('订阅源按站点折叠', () => {
         const wrapper = mountPanel(subs);
         const header = wrapper.find('[aria-expanded="false"]');
         expect(wrapper.html()).toContain('>2<');
-        expect(wrapper.text()).toContain('Rename all');
+        expect(wrapper.text()).toMatch(/Rename all|Confirm airport identity/);
         await header.trigger('click');
         expect(wrapper.find('[aria-expanded="true"]').exists()).toBe(true);
         await wrapper.find('[aria-expanded="true"]').trigger('click');
         expect(wrapper.find('[aria-expanded="false"]').exists()).toBe(true);
+    });
+
+    it('显式机场归属可将不同域名合并，且可恢复自动分组', async () => {
+        const subs = [
+            {
+                ...makeSub('a', 'one', 'https://one.example.net/sub'),
+                airportIdentity: { groupId: 'airport-1', name: '机场甲' },
+            },
+            {
+                ...makeSub('b', 'two', 'https://two.example.org/sub'),
+                airportIdentity: { groupId: 'airport-1', name: '机场甲' },
+            },
+            makeSub('c', 'three', 'https://three.example.com/sub'),
+        ];
+        const wrapper = mountPanel(subs, { onSplitAirportGroup: vi.fn() });
+        expect(wrapper.findAll('[aria-expanded="false"]')).toHaveLength(1);
+        expect(wrapper.find('[aria-expanded="false"]').text()).toContain('2');
+        expect(wrapper.text()).toContain('机场甲');
+        const split = wrapper.findAll('button').find((button) => /拆分机场分组|Split airport group/.test(button.text()));
+        expect(split).toBeTruthy();
+        await split.trigger('click');
+        expect(wrapper.emitted('split-airport-group')).toHaveLength(2);
+        expect(wrapper.emitted('split-airport-group').map(([ids, identity]) => [ids, identity.groupId])).toEqual([
+            [['a'], expect.any(String)],
+            [['b'], expect.any(String)],
+        ]);
+        expect(wrapper.emitted('split-airport-group')[0][1].groupId).not.toBe(
+            wrapper.emitted('split-airport-group')[1][1].groupId
+        );
+        const reset = wrapper
+            .findAll('button')
+            .find(
+                (button) =>
+                    button.text().includes('恢复自动机场分组') ||
+                    button.text().includes('Return to automatic airport grouping')
+            );
+        expect(reset).toBeTruthy();
+        await reset.trigger('click');
+        expect(wrapper.emitted('reset-group')?.[0]).toEqual([['a', 'b']]);
+    });
+
+    it('assigns only the selected group ids from the group header editor', async () => {
+        const wrapper = mountPanel([
+            { ...makeSub('a', 'one', 'https://one.example.net/sub'), airportIdentity: { groupId: 'existing', name: 'Existing' } },
+            makeSub('b', 'two', 'https://two.example.org/sub'),
+            makeSub('c', 'three', 'https://three.example.com/sub'),
+        ]);
+        const assign = wrapper.findAll('button').find((button) => /指定机场分组|Assign to airport group/.test(button.text()));
+        expect(assign).toBeTruthy();
+        await assign.trigger('click');
+        const select = wrapper.find('select');
+        await select.setValue('existing');
+        const save = wrapper.findAll('button').find((button) => /保存机场归属|Save airport assignment/.test(button.text()));
+        await save.trigger('click');
+        expect(wrapper.emitted('assign-airport-group')?.[0]).toEqual([['a', 'b', 'c'], { groupId: 'existing', name: 'Existing' }]);
     });
 
     it('单条目站点不折叠，直接平铺', async () => {

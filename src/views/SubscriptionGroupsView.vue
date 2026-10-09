@@ -13,8 +13,7 @@
     import SubscriptionEditModal from '../components/modals/SubscriptionEditModal.vue';
     import { useToastStore } from '../stores/toast.js';
     import { useI18n } from '../i18n/index.js';
-    import { inferAirportRootDomain } from '../utils/airport-domain.js';
-    import { rememberDomainName } from '../utils/domain-name-memory.js';
+    import { createAirportGroupId } from '../utils/airport-identity.js';
     import {
         resolveSubscriptionStatusFilter,
         matchesSubscriptionStatus,
@@ -93,32 +92,35 @@
     const previewSubscriptionName = ref('');
     const previewSubscriptionUrl = ref('');
 
-    // 一键重命名整个折叠组：用「识别名 + 两位序号」避免重名（同机场多账号场景）
-    const handleRenameGroup = (ids, baseName) => {
+    // 将当前显示组确认为一个机场身份，并统一显示组名；订阅源自身名称保持不变。
+    const handleRenameGroup = (ids, baseName, requestedGroupId) => {
         const base = String(baseName || '').trim();
         if (!base || !Array.isArray(ids) || ids.length === 0) return;
-
-        const pad = String(ids.length).length;
-        let renamed = 0;
-
-        ids.forEach((id, index) => {
-            const targetSub = subscriptions.value.find((s) => s.id === id);
-            if (!targetSub) return;
-            const seq = String(index + 1).padStart(pad, '0');
-            // 单个订阅时不需要序号
-            const newName = ids.length > 1 ? `${base} ${seq}` : base;
-            if (targetSub.name === newName) return;
-            updateSubscription({ ...targetSub, name: newName });
-            renamed++;
+        const groupId =
+            ids
+                .map(
+                    (id) =>
+                        subscriptions.value.find((sub) => sub.id === id)?.airportIdentity?.groupId
+                )
+                .find(Boolean) ||
+            requestedGroupId ||
+            createAirportGroupId();
+        const name = base;
+        let updated = 0;
+        ids.forEach((id) => {
+            const target = subscriptions.value.find((sub) => sub.id === id);
+            if (!target) return;
+            const identity = { groupId, name: base };
+            if (
+                target.airportIdentity?.groupId === groupId &&
+                target.airportIdentity?.name === base
+            )
+                return;
+            updateSubscription({ ...target, airportIdentity: identity });
+            updated++;
         });
-
-        if (renamed > 0) {
-            // 记住「域名 -> 机场名」，下次同域名的订阅可直接套用
-            const first = subscriptions.value.find((s) => s.id === ids[0]);
-            const dom = first ? inferAirportRootDomain(first.url) : '';
-            if (dom) rememberDomainName(dom, base);
-            showToast(t('subscriptions.groupRenamed', { name: base, count: renamed }), 'success');
-        }
+        if (updated)
+            showToast(t('subscriptions.groupRenamed', { name: base, count: updated }), 'success');
     };
 
     // 应用识别到的机场名（来自订阅响应头 / 官网标题）
@@ -128,11 +130,42 @@
         // useSubscriptions 的 updateSubscription 接收「完整订阅对象」而非 (id, patch)
         const targetSub = subscriptions.value.find((s) => s.id === subscriptionId);
         if (!targetSub) return;
-        updateSubscription({ ...targetSub, name: target });
-        // 记住「域名 -> 机场名」，下次同域名的订阅可直接套用
-        const dom = inferAirportRootDomain(targetSub.url);
-        if (dom) rememberDomainName(dom, target);
+        updateSubscription({
+            ...targetSub,
+            airportIdentity: {
+                groupId: targetSub.airportIdentity?.groupId || createAirportGroupId(),
+                name: target,
+            },
+        });
         showToast(t('subscriptions.nameApplied', { name: target }), 'success');
+    };
+
+    const handleAssignAirportGroup = (ids, identity) => {
+        const groupId = String(identity?.groupId || '').trim();
+        const name = String(identity?.name || '').trim();
+        if (!groupId || !name || !Array.isArray(ids)) return;
+        ids.forEach((id) => {
+            const target = subscriptions.value.find((sub) => sub.id === id);
+            if (target) updateSubscription({ ...target, airportIdentity: { groupId, name } });
+        });
+    };
+
+    const handleSplitAirportGroup = (ids, identity) => {
+        const groupId = String(identity?.groupId || '').trim();
+        const name = String(identity?.name || '').trim();
+        if (!groupId || !name || !Array.isArray(ids)) return;
+        ids.forEach((id) => {
+            const target = subscriptions.value.find((sub) => sub.id === id);
+            if (target) updateSubscription({ ...target, airportIdentity: { groupId, name } });
+        });
+    };
+
+    const handleResetAirportIdentity = (ids) => {
+        (ids || []).forEach((id) => {
+            const target = subscriptions.value.find((sub) => sub.id === id);
+            if (target) updateSubscription({ ...target, airportIdentity: null });
+        });
+        showToast(t('subscriptions.airportIdentityReset'), 'success');
     };
 
     const handlePreviewSubscription = (subscriptionId) => {
@@ -243,6 +276,9 @@
             @update-search="subscriptionSearchQuery = $event"
             @applyDetectedName="handleApplyDetectedName"
             @rename-group="handleRenameGroup"
+            @assign-airport-group="handleAssignAirportGroup"
+            @split-airport-group="handleSplitAirportGroup"
+            @reset-group="handleResetAirportIdentity"
         >
             <!-- Slot removed as user requested button move to dropdown -->
         </SubscriptionPanel>

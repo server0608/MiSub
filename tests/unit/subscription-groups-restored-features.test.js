@@ -25,4 +25,11 @@ describe('03e7c6e feature wiring regressions', () => {
         expect(source).toContain('const root = inferAirportRootDomain(`https://${raw}`) || raw');
         expect(source).not.toContain('main = parts[1]');
     });
+
+    it('exposes restore-automatic grouping for explicit airport groups and routes it through reset-group', () => {
+        const source = read('src/components/subscriptions/SubscriptionPanel.vue');
+        expect(source).toContain('handleResetGroup(group)');
+        expect(source).toContain("emit(\n            'reset-group'");
+        expect(source).toContain("t('subscriptions.automaticAirportIdentity')");
+    });
 });
