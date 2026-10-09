@@ -7,7 +7,8 @@ import { extractValidNodes } from '../../functions/modules/utils/node-parser.js'
 
 describe('VLESS / Reality support-x25519mlkem768 特性支持', () => {
     it('标准 VLESS Reality 节点默认应自动添加 support-x25519mlkem768: true', () => {
-        const url = 'vless://uuid-1234@reality.example.com:443?security=reality&pbk=pubkey123&sid=sid123&fp=chrome#RealityNode';
+        const url =
+            'vless://uuid-1234@reality.example.com:443?security=reality&pbk=pubkey123&sid=sid123&fp=chrome#RealityNode';
         const proxy = urlToClashProxy(url);
 
         expect(proxy).toBeTruthy();
@@ -19,23 +20,27 @@ describe('VLESS / Reality support-x25519mlkem768 特性支持', () => {
     });
 
     it('当 URL 显式指定 support-x25519mlkem768=false 或 0 时不应启用', () => {
-        const urlFalse = 'vless://uuid-1234@reality.example.com:443?security=reality&pbk=pubkey123&sid=sid123&support-x25519mlkem768=false#Disabled';
+        const urlFalse =
+            'vless://uuid-1234@reality.example.com:443?security=reality&pbk=pubkey123&sid=sid123&support-x25519mlkem768=false#Disabled';
         const proxyFalse = urlToClashProxy(urlFalse);
         expect(proxyFalse['reality-opts']['support-x25519mlkem768']).toBeUndefined();
 
-        const urlZero = 'vless://uuid-1234@reality.example.com:443?security=reality&pbk=pubkey123&sid=sid123&sxm=0#DisabledZero';
+        const urlZero =
+            'vless://uuid-1234@reality.example.com:443?security=reality&pbk=pubkey123&sid=sid123&sxm=0#DisabledZero';
         const proxyZero = urlToClashProxy(urlZero);
         expect(proxyZero['reality-opts']['support-x25519mlkem768']).toBeUndefined();
     });
 
     it('当 URL 显式包含 sxm=1 时应正确启用', () => {
-        const url = 'vless://uuid-1234@reality.example.com:443?security=reality&pbk=pubkey123&sid=sid123&sxm=1#SxmNode';
+        const url =
+            'vless://uuid-1234@reality.example.com:443?security=reality&pbk=pubkey123&sid=sid123&sxm=1#SxmNode';
         const proxy = urlToClashProxy(url);
         expect(proxy['reality-opts']['support-x25519mlkem768']).toBe(true);
     });
 
     it('非 Reality 节点（如普通 VLESS+TLS 或直连）绝不能附加 reality-opts', () => {
-        const normalTls = 'vless://uuid-1234@tls.example.com:443?security=tls&sni=tls.example.com#NormalTLS';
+        const normalTls =
+            'vless://uuid-1234@tls.example.com:443?security=tls&sni=tls.example.com#NormalTLS';
         const proxyTls = urlToClashProxy(normalTls);
         expect(proxyTls.tls).toBe(true);
         expect(proxyTls['reality-opts']).toBeUndefined();
@@ -57,8 +62,8 @@ describe('VLESS / Reality support-x25519mlkem768 特性支持', () => {
             'reality-opts': {
                 'public-key': 'pubkey123',
                 'short-id': 'sid123',
-                'support-x25519mlkem768': true
-            }
+                'support-x25519mlkem768': true,
+            },
         };
 
         const url = convertClashProxyToUrl(proxy);
@@ -67,7 +72,8 @@ describe('VLESS / Reality support-x25519mlkem768 特性支持', () => {
     });
 
     it('generateBuiltinClashConfig 生成的 YAML 中应正确包含 support-x25519mlkem768: true', () => {
-        const url = 'vless://uuid-1234@reality.example.com:443?security=reality&pbk=pubkey123&sid=sid123#MyReality';
+        const url =
+            'vless://uuid-1234@reality.example.com:443?security=reality&pbk=pubkey123&sid=sid123#MyReality';
         const yamlConfig = generateBuiltinClashConfig(url);
         const parsed = yaml.load(yamlConfig);
 
@@ -75,22 +81,24 @@ describe('VLESS / Reality support-x25519mlkem768 特性支持', () => {
         expect(parsed.proxies[0]['reality-opts']).toEqual({
             'public-key': 'pubkey123',
             'short-id': 'sid123',
-            'support-x25519mlkem768': true
+            'support-x25519mlkem768': true,
         });
     });
 
     it('urlsToClashProxies 应支持 options.supportX25519mlkem768 选项显式关闭', () => {
-        const url = 'vless://uuid-1234@reality.example.com:443?security=reality&pbk=pubkey123&sid=sid123#MyReality';
+        const url =
+            'vless://uuid-1234@reality.example.com:443?security=reality&pbk=pubkey123&sid=sid123#MyReality';
         const [proxy] = urlsToClashProxies([url], { supportX25519mlkem768: false });
 
         expect(proxy['reality-opts']).toEqual({
             'public-key': 'pubkey123',
-            'short-id': 'sid123'
+            'short-id': 'sid123',
         });
     });
 
     it('Trojan 协议配合 Reality 时也应支持 support-x25519mlkem768', () => {
-        const trojanUrl = 'trojan://password123@trojan.example.com:443?security=reality&pbk=pubkey123&sid=sid123#TrojanReality';
+        const trojanUrl =
+            'trojan://password123@trojan.example.com:443?security=reality&pbk=pubkey123&sid=sid123#TrojanReality';
         const proxy = urlToClashProxy(trojanUrl);
 
         expect(proxy.type).toBe('trojan');

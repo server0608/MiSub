@@ -84,7 +84,10 @@ ss://new@server5.com:10000`;
     });
 
     it('明文 HTTP proxy URI 应作为节点导入而非订阅链接', () => {
-        bulkImport.handleBulkImport('http://alice:p%40ss%3Aword@proxy.example.com:8080#plain-http', '');
+        bulkImport.handleBulkImport(
+            'http://alice:p%40ss%3Aword@proxy.example.com:8080#plain-http',
+            ''
+        );
 
         const imported = dataStore.subscriptions.find((item) => item.name === 'plain-http');
         expect(imported).toBeDefined();

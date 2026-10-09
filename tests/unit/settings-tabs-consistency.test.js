@@ -59,7 +59,9 @@ describe('设置页信息架构一致性', () => {
 
         for (const { name, path } of CONTAINERS) {
             const source = await readSource(path);
-            expect(source, `${name} 未传入刷新倒计时`).toContain(':restart-countdown="restartCountdown"');
+            expect(source, `${name} 未传入刷新倒计时`).toContain(
+                ':restart-countdown="restartCountdown"'
+            );
             expect(source, `${name} 未监听立即刷新事件`).toContain('@reload-now=');
         }
     });

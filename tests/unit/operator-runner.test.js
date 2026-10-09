@@ -22,7 +22,6 @@ describe('operator runner', () => {
         expect(decodeURIComponent(result[0])).toContain('#HK-01');
     });
 
-
     it('runs script operators through the restricted DSL without dynamic code execution', async () => {
         const functionSpy = vi.spyOn(globalThis, 'Function').mockImplementation(() => {
             throw new Error('dynamic code execution disabled');

@@ -156,10 +156,13 @@ describe('Clash 内置生成器', () => {
     });
 
     it('Stash UA 请求时应输出 #SUBSCRIBED 首行以启用自动更新', () => {
-        const result = generateBuiltinClashConfig('ss://YWVzLTEyOC1nY206cGFzcw==@1.2.3.4:8388#Test', {
-            userAgent: 'Stash/2.5.3',
-            managedConfigUrl: 'https://sub.example.com/api/sub?token=abc',
-        });
+        const result = generateBuiltinClashConfig(
+            'ss://YWVzLTEyOC1nY206cGFzcw==@1.2.3.4:8388#Test',
+            {
+                userAgent: 'Stash/2.5.3',
+                managedConfigUrl: 'https://sub.example.com/api/sub?token=abc',
+            }
+        );
 
         expect(result.startsWith('#SUBSCRIBED https://sub.example.com/api/sub?token=abc\n')).toBe(
             true
@@ -167,10 +170,13 @@ describe('Clash 内置生成器', () => {
     });
 
     it('普通 Clash UA 不应输出 #SUBSCRIBED 首行', () => {
-        const result = generateBuiltinClashConfig('ss://YWVzLTEyOC1nY206cGFzcw==@1.2.3.4:8388#Test', {
-            userAgent: 'ClashforWindows/0.20.39',
-            managedConfigUrl: 'https://sub.example.com/api/sub?token=abc',
-        });
+        const result = generateBuiltinClashConfig(
+            'ss://YWVzLTEyOC1nY206cGFzcw==@1.2.3.4:8388#Test',
+            {
+                userAgent: 'ClashforWindows/0.20.39',
+                managedConfigUrl: 'https://sub.example.com/api/sub?token=abc',
+            }
+        );
 
         expect(result.startsWith('#SUBSCRIBED')).toBe(false);
     });

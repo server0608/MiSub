@@ -2,7 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { handleApiRequest } from '../../functions/modules/api-router.js';
 
 function createKv() {
-    return { async get() { return null; }, async put() {}, async delete() {} };
+    return {
+        async get() {
+            return null;
+        },
+        async put() {},
+        async delete() {},
+    };
 }
 
 describe('POST-only data migration route', () => {

@@ -85,29 +85,29 @@ export const useDataStore = defineStore('data', () => {
         }
 
         fetchDataPromise = (async () => {
-        isLoading.value = true;
-        try {
-            const data = await api.get('/api/data');
+            isLoading.value = true;
+            try {
+                const data = await api.get('/api/data');
 
-            if (data.error) {
-                throw new Error(data.error);
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                hydrateFromData(data); // Re-use hydration logic
+                pruneInvalidReferences(); // 数据拉取后执行自愈
+                clearDirty();
+                return true;
+            } catch (error) {
+                console.error('Failed to fetch data:', error);
+                showToast(t('store.fetchDataFailed', { message: error.message }), 'error');
+                // 不向调用方抛出：所有调用点都没有 try/catch，rejection 会冒泡成
+                // 全局 unhandledrejection，被 main.js 处理器再提示一次，
+                // 用户会看到两个「操作失败」弹窗。
+                return false;
+            } finally {
+                isLoading.value = false;
+                fetchDataPromise = null;
             }
-
-            hydrateFromData(data); // Re-use hydration logic
-            pruneInvalidReferences(); // 数据拉取后执行自愈
-            clearDirty();
-            return true;
-        } catch (error) {
-            console.error('Failed to fetch data:', error);
-            showToast(t('store.fetchDataFailed', { message: error.message }), 'error');
-            // 不向调用方抛出：所有调用点都没有 try/catch，rejection 会冒泡成
-            // 全局 unhandledrejection，被 main.js 处理器再提示一次，
-            // 用户会看到两个「操作失败」弹窗。
-            return false;
-        } finally {
-            isLoading.value = false;
-            fetchDataPromise = null;
-        }
         })();
         return fetchDataPromise;
     }

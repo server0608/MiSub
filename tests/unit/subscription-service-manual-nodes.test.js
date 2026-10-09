@@ -159,13 +159,23 @@ describe('subscription-service 手动节点健壮性', () => {
 
     it('HTTP 订阅源中的明文 HTTP proxy 应保留在生成的节点列表中', async () => {
         const clashYaml = `proxies:\n  - name: Plain HTTP\n    type: http\n    server: proxy.example.com\n    port: 8080\n    username: alice\n    password: p@ss:word\n    tls: false\n`;
-        vi.stubGlobal('fetch', vi.fn(async () => new Response(clashYaml, { status: 200 })));
+        vi.stubGlobal(
+            'fetch',
+            vi.fn(async () => new Response(clashYaml, { status: 200 }))
+        );
 
         const result = await generateCombinedNodeList(
             {},
             { enableAccessLog: false },
             'ClashMeta',
-            [{ id: 'http-sub', name: 'HTTP subscription', url: 'https://example.com/sub', enabled: true }],
+            [
+                {
+                    id: 'http-sub',
+                    name: 'HTTP subscription',
+                    url: 'https://example.com/sub',
+                    enabled: true,
+                },
+            ],
             '',
             { enableSubscriptions: true },
             false

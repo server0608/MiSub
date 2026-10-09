@@ -9,8 +9,12 @@ function createKv({ get } = {}) {
             if (get) return get(key);
             return values.get(key) ?? null;
         },
-        async put(key, value) { values.set(key, value); },
-        async delete(key) { values.delete(key); },
+        async put(key, value) {
+            values.set(key, value);
+        },
+        async delete(key) {
+            values.delete(key);
+        },
     };
 }
 
@@ -19,7 +23,11 @@ describe('admin password fails closed when KV is unavailable', () => {
         const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
         try {
             const password = await getAdminPassword({
-                MISUB_KV: createKv({ get: async () => { throw new Error('KV storage is paused'); } }),
+                MISUB_KV: createKv({
+                    get: async () => {
+                        throw new Error('KV storage is paused');
+                    },
+                }),
             }).catch((error) => error.message);
             expect(password).toBe('KV storage is paused');
         } finally {
@@ -30,7 +38,11 @@ describe('admin password fails closed when KV is unavailable', () => {
     it('rejects login while KV password storage is unavailable', async () => {
         const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
         const env = {
-            MISUB_KV: createKv({ get: async () => { throw new Error('KV storage is paused'); } }),
+            MISUB_KV: createKv({
+                get: async () => {
+                    throw new Error('KV storage is paused');
+                },
+            }),
             COOKIE_SECRET: 'test-cookie-secret',
         };
         const request = new Request('https://example.com/api/login', {
@@ -49,8 +61,10 @@ describe('admin password fails closed when KV is unavailable', () => {
 
     it('rejects password changes controlled by ADMIN_PASSWORD env var', async () => {
         const kv = createKv();
-        const result = await setAdminPassword({ ADMIN_PASSWORD: 'env-password', MISUB_KV: kv }, 'new-password')
-            .catch((error) => error.message);
+        const result = await setAdminPassword(
+            { ADMIN_PASSWORD: 'env-password', MISUB_KV: kv },
+            'new-password'
+        ).catch((error) => error.message);
         expect(result).toMatch(/环境变量 ADMIN_PASSWORD/);
         await expect(kv.get('SYSTEM_ADMIN_PASSWORD')).resolves.toBeNull();
     });

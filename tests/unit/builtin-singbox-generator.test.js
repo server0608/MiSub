@@ -165,7 +165,6 @@ describe('Built-in Sing-box generator', () => {
         expect(tuicNode?.udp_relay_mode).toBeUndefined();
     });
 
-
     it('should use rule_set for geoip instead of deprecated geoip field (sing-box 1.12+)', () => {
         const result = generateBuiltinSingboxConfig('trojan://password@1.2.3.4:443#TestNode');
         const parsed = JSON.parse(result);

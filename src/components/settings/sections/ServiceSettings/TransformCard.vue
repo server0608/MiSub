@@ -106,7 +106,8 @@
             if (props.settings.subconverter.defaultBackend !== backend) return;
             backendTestStatus.value = {
                 success: Boolean(result?.success || result?.available),
-                message: result?.message || result?.error || t('settings.transformBackendTestFailed'),
+                message:
+                    result?.message || result?.error || t('settings.transformBackendTestFailed'),
                 endpoint: result?.endpoint || '',
                 elapsedMs: result?.elapsedMs,
             };
@@ -257,7 +258,7 @@
                 :aria-label="t('actions.dismiss')"
                 @click="
                     engineChangeNoticeDismissed = true;
-                    showEngineChangeWarning = false
+                    showEngineChangeWarning = false;
                 "
             >
                 ×
@@ -266,9 +267,9 @@
                 type="button"
                 class="shrink-0 rounded-md border border-amber-300 px-3 py-1.5 text-xs font-semibold hover:bg-amber-100 dark:border-amber-400/30 dark:hover:bg-amber-500/10"
                 @click="
-                restorePreviousEngineSettings();
-                engineChangeNoticeDismissed = true;
-            "
+                    restorePreviousEngineSettings();
+                    engineChangeNoticeDismissed = true;
+                "
             >
                 {{ t('settings.transformRestoreEngineSettings') }}
             </button>

@@ -30,9 +30,12 @@ describe('Data store settings cache', () => {
     it('shares one in-flight fetch result across concurrent fetchData calls', async () => {
         let resolveRequest;
         const responseData = { misubs: [], profiles: [], ruleTemplates: [], config: {} };
-        const fetchMock = vi.fn(() => new Promise((resolve) => {
-            resolveRequest = () => resolve(jsonResponse(responseData));
-        }));
+        const fetchMock = vi.fn(
+            () =>
+                new Promise((resolve) => {
+                    resolveRequest = () => resolve(jsonResponse(responseData));
+                })
+        );
         vi.stubGlobal('fetch', fetchMock);
 
         const dataStore = createStore();

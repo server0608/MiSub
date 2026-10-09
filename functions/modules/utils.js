@@ -92,7 +92,9 @@ async function getAdminPasswordFromKv(env) {
         return await kv.get('SYSTEM_ADMIN_PASSWORD');
     } catch (error) {
         if (isStorageUnavailableError(error)) {
-            console.warn(`[Auth Storage] KV get failed for SYSTEM_ADMIN_PASSWORD: ${error.message}`);
+            console.warn(
+                `[Auth Storage] KV get failed for SYSTEM_ADMIN_PASSWORD: ${error.message}`
+            );
         }
         throw error;
     }

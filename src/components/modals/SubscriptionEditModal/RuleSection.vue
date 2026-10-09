@@ -98,32 +98,32 @@
                 aria-controls="sub-edit-rule-content"
                 class="flex flex-1 items-center gap-2 text-left cursor-pointer"
             >
-            <div class="flex items-center gap-2">
-                <svg
-                    class="w-4 h-4 text-gray-500 transition-transform duration-200"
-                    :class="{ 'rotate-90': isRuleExpanded }"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M9 5l7 7-7 7"
-                    />
-                </svg>
-                <span
-                    class="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer"
-                    >{{ t('subscriptions.includeExclude') }}</span
-                >
-                <span
-                    v-if="selectedRules.length > 0"
-                    class="px-1.5 py-0.5 text-xs font-medium rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200"
-                >
-                    {{ selectedRules.length }}
-                </span>
-            </div>
+                <div class="flex items-center gap-2">
+                    <svg
+                        class="w-4 h-4 text-gray-500 transition-transform duration-200"
+                        :class="{ 'rotate-90': isRuleExpanded }"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M9 5l7 7-7 7"
+                        />
+                    </svg>
+                    <span
+                        class="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer"
+                        >{{ t('subscriptions.includeExclude') }}</span
+                    >
+                    <span
+                        v-if="selectedRules.length > 0"
+                        class="px-1.5 py-0.5 text-xs font-medium rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200"
+                    >
+                        {{ selectedRules.length }}
+                    </span>
+                </div>
             </button>
             <div class="flex items-center gap-2" @click.stop>
                 <button
@@ -353,7 +353,9 @@
                     <textarea
                         id="sub-edit-exclude"
                         :aria-invalid="excludeRuleState.errors.length > 0 ? 'true' : 'false'"
-                        :aria-describedby="excludeRuleState.errors.length ? 'sub-edit-exclude-error' : undefined"
+                        :aria-describedby="
+                            excludeRuleState.errors.length ? 'sub-edit-exclude-error' : undefined
+                        "
                         v-model="editingSubscription.exclude"
                         :placeholder="t('subscriptions.excludePlaceholder')"
                         rows="8"

@@ -764,7 +764,8 @@ export const messages = {
             customToken: '自定义订阅Token',
             profileToken: '订阅组分享Token',
             profileTokenPlaceholder: '用于生成订阅组链接专用Token',
-            subscriptionTokenRotationHint: '订阅 Token 与管理密码相互独立。若怀疑订阅链接已泄露，请修改此 Token 并保存；旧链接将立即失效。',
+            subscriptionTokenRotationHint:
+                '订阅 Token 与管理密码相互独立。若怀疑订阅链接已泄露，请修改此 Token 并保存；旧链接将立即失效。',
             featureControlTitle: '功能控制',
             featureControlDesc: '统一管理自动更新、访问日志、流量节点和访问控制开关。',
             autoUpdateInterval: '订阅自动更新间隔',
@@ -1138,7 +1139,8 @@ export const messages = {
             transformRuleSource: '1. 规则来源',
             transformExternalWarning:
                 '使用第三方订阅转换时，无法兼容 MiSub 内置规则、内置预设和本地 custom: 模板。请使用远程预设模板或自定义 URL。',
-            transformEngineChangeNotice: '切换到第三方后端会调整规则来源并关闭内置选项。原设置仍保存在本次页面状态中；切回内置引擎可恢复。',
+            transformEngineChangeNotice:
+                '切换到第三方后端会调整规则来源并关闭内置选项。原设置仍保存在本次页面状态中；切回内置引擎可恢复。',
             transformRestoreEngineSettings: '恢复内置设置',
             transformBuiltinParams: '内置引擎参数',
             transformRuleLevel: '分流详细等级 (仅自动分流生效)',
@@ -2601,7 +2603,8 @@ export const messages = {
             customToken: 'Custom token',
             profileToken: 'Profile share token',
             profileTokenPlaceholder: 'Token dedicated to profile subscription links',
-            subscriptionTokenRotationHint: 'Subscription tokens are separate from the admin password. If a link may be exposed, change this token and save; old links will stop working immediately.',
+            subscriptionTokenRotationHint:
+                'Subscription tokens are separate from the admin password. If a link may be exposed, change this token and save; old links will stop working immediately.',
             featureControlTitle: 'Features',
             featureControlDesc: 'Manage auto update, logs, traffic node and access switches.',
             autoUpdateInterval: 'Auto update interval',
@@ -3003,7 +3006,8 @@ export const messages = {
             transformRuleSource: '1. Rule source',
             transformExternalWarning:
                 'External subscription conversion cannot use MiSub built-in rules, built-in presets, or local custom: templates. Use a remote preset template or custom URL.',
-            transformEngineChangeNotice: 'Switching to an external backend changes the rule source and disables built-in options. Your previous settings stay in this page session and can be restored by switching back.',
+            transformEngineChangeNotice:
+                'Switching to an external backend changes the rule source and disables built-in options. Your previous settings stay in this page session and can be restored by switching back.',
             transformRestoreEngineSettings: 'Restore built-in settings',
             transformBuiltinParams: 'Built-in engine parameters',
             transformRuleLevel: 'Routing detail level (auto routing only)',

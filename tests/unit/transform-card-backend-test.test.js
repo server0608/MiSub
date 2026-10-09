@@ -54,8 +54,12 @@ describe('TransformCard third-party backend test button', () => {
         });
 
         const engineButtons = wrapper.findAll('button');
-        await engineButtons.find((button) => button.text().includes('External backend')).trigger('click');
-        await wrapper.get('[data-testid="engine-change-notice"] button:nth-of-type(2)').trigger('click');
+        await engineButtons
+            .find((button) => button.text().includes('External backend'))
+            .trigger('click');
+        await wrapper
+            .get('[data-testid="engine-change-notice"] button:nth-of-type(2)')
+            .trigger('click');
         expect(settings.subconverter.engineMode).toBe('builtin');
         expect(settings.transformConfigMode).toBe('builtin');
         expect(settings.transformConfig).toBe('builtin:clash_misub');
@@ -72,9 +76,15 @@ describe('TransformCard third-party backend test button', () => {
         const testButton = externalWrapper.get('[data-testid="test-subconverter-backend"]');
         await testButton.trigger('click');
         expect(testSubconverterBackend).toHaveBeenCalledOnce();
-        await vi.waitFor(() => expect(externalWrapper.find('[data-testid="subconverter-backend-test-result"]').exists()).toBe(true));
+        await vi.waitFor(() =>
+            expect(
+                externalWrapper.find('[data-testid="subconverter-backend-test-result"]').exists()
+            ).toBe(true)
+        );
         await flushPromises();
-        expect(externalWrapper.get('[data-testid="subconverter-backend-test-result"]').text()).toContain('网络不可用');
+        expect(
+            externalWrapper.get('[data-testid="subconverter-backend-test-result"]').text()
+        ).toContain('网络不可用');
         expect(testButton.attributes('disabled')).toBeUndefined();
     });
 

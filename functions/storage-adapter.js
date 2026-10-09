@@ -87,7 +87,7 @@ const D1_KNOWN_SETTINGS_KEYS = new Set([
     'misub_clients_v1',
     'misub_guestbook_v1',
     'misub_settings_v1',
-    'misub_restore_snapshot_latest'
+    'misub_restore_snapshot_latest',
 ]);
 
 async function ensureD1Schema(d1Db) {
@@ -897,13 +897,11 @@ const D1_MIGRATION_KEYS = [
     'misub_clients_v1',
     'misub_guestbook_v1',
     'misub_settings_v1',
-    'misub_restore_snapshot_latest'
+    'misub_restore_snapshot_latest',
 ];
 
 /** 需要按前缀枚举后逐条搬运的键 */
-const D1_MIGRATION_KEY_PREFIXES = [
-    DATA_KEYS.PROFILE_DOWNLOAD_COUNT_PREFIX
-];
+const D1_MIGRATION_KEY_PREFIXES = [DATA_KEYS.PROFILE_DOWNLOAD_COUNT_PREFIX];
 
 export { D1_MIGRATION_KEYS, D1_MIGRATION_KEY_PREFIXES };
 
@@ -933,7 +931,7 @@ export class DataMigrator {
                 errors: [],
             };
 
-            const copyKey = async key => {
+            const copyKey = async (key) => {
                 try {
                     const value = await kvAdapter.get(key);
                     if (value === null || value === undefined) {

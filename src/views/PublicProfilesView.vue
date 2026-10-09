@@ -429,12 +429,18 @@
             </template>
 
             <template #profiles>
-                <div v-if="loading" role="status" aria-live="polite">{{ t('publicProfiles.loading') }}</div>
+                <div v-if="loading" role="status" aria-live="polite">
+                    {{ t('publicProfiles.loading') }}
+                </div>
                 <div v-else-if="error" role="alert">
                     <p>{{ error }}</p>
-                    <button type="button" @click="fetchPublicProfiles">{{ t('publicProfiles.retry') }}</button>
+                    <button type="button" @click="fetchPublicProfiles">
+                        {{ t('publicProfiles.retry') }}
+                    </button>
                 </div>
-                <div v-else-if="publicProfiles.length === 0" role="status">{{ t('publicProfiles.empty') }}</div>
+                <div v-else-if="publicProfiles.length === 0" role="status">
+                    {{ t('publicProfiles.empty') }}
+                </div>
                 <ProfileGrid
                     v-else
                     :profiles="publicProfiles"
@@ -585,7 +591,11 @@
                             {{ t('publicProfiles.retry') }}
                         </button>
                     </div>
-                    <div v-else-if="publicProfiles.length === 0" role="status" class="py-16 text-center text-gray-500 dark:text-gray-400">
+                    <div
+                        v-else-if="publicProfiles.length === 0"
+                        role="status"
+                        class="py-16 text-center text-gray-500 dark:text-gray-400"
+                    >
                         {{ t('publicProfiles.empty') }}
                     </div>
 

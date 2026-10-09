@@ -57,7 +57,9 @@ describe('订阅源按站点折叠', () => {
         const groupToggle = wrapper.find('[aria-expanded="false"]');
         expect(groupToggle.exists()).toBe(true);
         expect(groupToggle.attributes('aria-expanded')).toBe('false');
-        expect(wrapper.findAll('.stub-card')[0].element.parentElement.parentElement.style.display).toBe('none');
+        expect(
+            wrapper.findAll('.stub-card')[0].element.parentElement.parentElement.style.display
+        ).toBe('none');
         // 有可折叠分组时会出现「折叠全部」
         expect(wrapper.html()).toMatch(/折叠全部|Collapse all/);
     });
@@ -88,7 +90,10 @@ describe('订阅源按站点折叠', () => {
         expect(wrapper.find('[aria-expanded="true"]').exists()).toBe(true);
 
         // 模拟搜索结果：跨子域仍合为一组；随后模拟分页数据更新，保留用户的展开态。
-        await wrapper.setProps({ subscriptions: subs.slice(0, 3), paginatedSubscriptions: subs.slice(0, 2) });
+        await wrapper.setProps({
+            subscriptions: subs.slice(0, 3),
+            paginatedSubscriptions: subs.slice(0, 2),
+        });
         expect(wrapper.findAll('.stub-card')).toHaveLength(2);
         expect(wrapper.find('[aria-expanded="true"]').exists()).toBe(true);
         await wrapper.setProps({ paginatedSubscriptions: subs.slice(1, 3) });

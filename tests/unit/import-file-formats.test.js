@@ -13,8 +13,7 @@ const SAMPLE_TROJAN =
     'trojan://Trojan%4082164024@ca.tronsg.com:443?sni=ca.tronsg.com&security=tls&type=tcp#ca';
 const SAMPLE_SS = 'ss://YWVzLTI1Ni1nY206cGFzc3dvcmQ@1.2.3.4:8388#ssnode';
 
-const count = (content) =>
-    parseNodeList(content).filter((node) => node && node.url).length;
+const count = (content) => parseNodeList(content).filter((node) => node && node.url).length;
 
 describe('parseNodeList supports uploaded file formats', () => {
     it('parses plaintext node links', () => {

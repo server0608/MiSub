@@ -46,9 +46,7 @@ describe('TG 订阅链接批量提取', () => {
     });
 
     it('重复链接自动去重', () => {
-        const urls = extractSubscriptionUrls(
-            'https://a.com/x\nhttps://a.com/x\nhttps://a.com/x'
-        );
+        const urls = extractSubscriptionUrls('https://a.com/x\nhttps://a.com/x\nhttps://a.com/x');
         expect(urls).toEqual(['https://a.com/x']);
     });
 
