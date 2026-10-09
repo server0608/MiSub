@@ -21,6 +21,28 @@ const NON_AIRPORT_HOSTS = [
     /\.onrender\.com$/i,
 ];
 
+const MULTI_LABEL_PUBLIC_SUFFIXES = new Set([
+    'com.cn',
+    'net.cn',
+    'org.cn',
+    'gov.cn',
+    'com.hk',
+    'com.tw',
+    'co.uk',
+    'org.uk',
+    'me.uk',
+    'ac.uk',
+    'gov.uk',
+    'com.au',
+    'net.au',
+    'org.au',
+    'co.jp',
+    'co.kr',
+    'co.nz',
+    'com.sg',
+    'appspot.com',
+]);
+
 const COMMON_SUBDOMAIN_LABELS = new Set([
     'sub',
     'sub1',
@@ -59,12 +81,14 @@ export function inferAirportRootDomain(sourceUrl) {
         if (NON_AIRPORT_HOSTS.some((re) => re.test(host))) return '';
 
         const parts = host.split('.');
+        const suffix = parts.slice(-2).join('.');
+        const rootLabelCount = MULTI_LABEL_PUBLIC_SUFFIXES.has(suffix) ? 3 : 2;
         let base;
         if (parts.length >= 3) {
             const first = parts[0];
             const isCommonPrefix = COMMON_SUBDOMAIN_LABELS.has(first);
             const isNumberedPrefix = /^[a-z]{0,4}\d+$/i.test(first);
-            base = isCommonPrefix || isNumberedPrefix ? parts.slice(1) : parts.slice(-2);
+            base = parts.slice(-rootLabelCount);
         } else {
             base = parts;
         }

@@ -170,7 +170,7 @@
     const siteKeyOf = (sub) => {
         try {
             const host = new URL(sub.url).hostname;
-            return host ? host.replace(/^www\./, '') : '';
+            return host ? (inferAirportRootDomain(sub.url) || host.replace(/^www\./, '')) : '';
         } catch (e) {
             return '';
         }

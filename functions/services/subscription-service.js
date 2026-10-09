@@ -169,6 +169,8 @@ export function inferAirportRootDomain(sourceUrl) {
         if (NON_AIRPORT_HOSTS.some((re) => re.test(host))) return '';
 
         const parts = host.split('.');
+        const suffix = parts.slice(-2).join('.');
+        const rootLabelCount = MULTI_LABEL_PUBLIC_SUFFIXES.has(suffix) ? 3 : 2;
         // 常见机场子域前缀（去掉后取主域名）
         const COMMON_SUBDOMAIN_LABELS = new Set([
             'sub',
@@ -198,7 +200,7 @@ export function inferAirportRootDomain(sourceUrl) {
             const first = parts[0];
             const isCommonPrefix = COMMON_SUBDOMAIN_LABELS.has(first);
             const isNumberedPrefix = /^[a-z]{0,4}\d+$/i.test(first); // 如 dy11 / sub12 / node3
-            base = isCommonPrefix || isNumberedPrefix ? parts.slice(1) : parts.slice(-2);
+            base = parts.slice(-rootLabelCount);
         } else {
             base = parts;
         }
@@ -210,6 +212,28 @@ export function inferAirportRootDomain(sourceUrl) {
         return '';
     }
 }
+
+const MULTI_LABEL_PUBLIC_SUFFIXES = new Set([
+    'com.cn',
+    'net.cn',
+    'org.cn',
+    'gov.cn',
+    'com.hk',
+    'com.tw',
+    'co.uk',
+    'org.uk',
+    'me.uk',
+    'ac.uk',
+    'gov.uk',
+    'com.au',
+    'net.au',
+    'org.au',
+    'co.jp',
+    'co.kr',
+    'co.nz',
+    'com.sg',
+    'appspot.com',
+]);
 
 /**
  * 抓取机场官网标题，作为品牌名的兜底识别来源。
