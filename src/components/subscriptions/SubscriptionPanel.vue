@@ -168,12 +168,37 @@
     const collapsedGroups = ref(new Set());
     const knownGroupKeys = ref(new Set());
 
-    /** 从订阅 URL 提取站点标识（域名）；非 http 链接归入「其他」。 */
+    /**
+     * 从 URL 提取稳定的分组身份。
+     * 普通域名按推断出的机场根域聚合（子域、路径 token 不影响）；
+     * 在公共托管平台上不能将 tenants 合并到平台根域，保留其 tenant 主机名。
+     */
     const siteKeyOf = (sub) => {
         try {
-            const host = new URL(sub.url).hostname;
-            return host ? inferAirportRootDomain(sub.url) || host.replace(/^www\./, '') : '';
-        } catch (e) {
+            const host = new URL(sub.url).hostname.toLowerCase().replace(/^www\./, '');
+            if (!host) return '';
+            const airportRoot = inferAirportRootDomain(sub.url);
+            if (airportRoot) return airportRoot;
+
+            const hostedSuffixes = [
+                'pages.dev',
+                'workers.dev',
+                'vercel.app',
+                'netlify.app',
+                'github.io',
+                'r2.dev',
+                'trafficmanager.net',
+                'cloudfront.net',
+                'herokuapp.com',
+                'onrender.com',
+            ];
+            const suffix = hostedSuffixes.find((value) => host.endsWith(`.${value}`));
+            if (suffix) {
+                const tenant = host.slice(0, -(suffix.length + 1)).split('.').pop();
+                return tenant ? `${tenant}.${suffix}` : host;
+            }
+            return host;
+        } catch {
             return '';
         }
     };

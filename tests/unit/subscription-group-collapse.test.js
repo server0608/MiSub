@@ -101,6 +101,50 @@ describe('订阅源按站点折叠', () => {
         expect(wrapper.find('[aria-expanded="true"]').exists()).toBe(true);
     });
 
+    it('wd-blue sources group by airport root across subdomains and URLs', async () => {
+        const subs = [
+            makeSub('a', 'first', 'https://sub1.wd-blue.com/sub/one'),
+            makeSub('b', 'second', 'https://api.wd-blue.com/sub/two'),
+            makeSub('c', 'third', 'https://www.wd-blue.com/third'),
+        ];
+        const wrapper = mountPanel(subs);
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.findAll('[aria-expanded="false"]')).toHaveLength(1);
+        expect(wrapper.html()).toContain('>3<');
+        expect(wrapper.findAll('.stub-card')).toHaveLength(3);
+    });
+
+    it('托管域名按项目 tenant 分组，不把无关 pages.dev 站点合并', async () => {
+        const subs = [
+            makeSub('a', 'one', 'https://project-a.pages.dev/sub/one'),
+            makeSub('b', 'two', 'https://project-a.pages.dev/sub/two'),
+            makeSub('c', 'other', 'https://project-b.pages.dev/sub'),
+        ];
+        const wrapper = mountPanel(subs);
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.findAll('[aria-expanded="false"]')).toHaveLength(1);
+        expect(wrapper.findAll('.stub-card')).toHaveLength(3);
+        expect(wrapper.html()).toContain('Project a');
+        expect(wrapper.find('[aria-expanded="false"]').element.closest('.rounded-xl').textContent).toContain('2');
+    });
+
+    it('组标题可以展开/收起，且显示数量及组重命名控件', async () => {
+        const subs = [
+            { ...makeSub('a', 'one', 'https://api.wd-blue.com/sub/one'), detectedName: '西数' },
+            makeSub('b', 'two', 'https://sub.wd-blue.com/sub/two'),
+        ];
+        const wrapper = mountPanel(subs);
+        const header = wrapper.find('[aria-expanded="false"]');
+        expect(wrapper.html()).toContain('>2<');
+        expect(wrapper.text()).toContain('Rename all');
+        await header.trigger('click');
+        expect(wrapper.find('[aria-expanded="true"]').exists()).toBe(true);
+        await wrapper.find('[aria-expanded="true"]').trigger('click');
+        expect(wrapper.find('[aria-expanded="false"]').exists()).toBe(true);
+    });
+
     it('单条目站点不折叠，直接平铺', async () => {
         const subs = [
             makeSub('a', 'a', 'https://only-one.example.com/sub'),
