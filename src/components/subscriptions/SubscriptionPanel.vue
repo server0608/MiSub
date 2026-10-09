@@ -203,9 +203,12 @@
         }
     };
 
-    /** 站点分组只接收当前页数据，分页对分组和未分组条目都一致生效。 */
+    /**
+     * 始终按完整筛选结果分组，避免分页把同一机场的订阅拆散到不同页；
+     * 页面切换由分组列表分页，而非先分页订阅再尝试分组。
+     */
     const groupedSubscriptions = computed(() => {
-        const list = props.paginatedSubscriptions || props.subscriptions || [];
+        const list = props.subscriptions || [];
         const order = [];
         const map = new Map();
 
@@ -230,9 +233,22 @@
         groupedSubscriptions.value.filter((g) => g.items.length > 1)
     );
 
-    /** 单条目站点（不折叠，直接平铺展示）。 */
+    const pageSubscriptionIds = computed(
+        () => new Set((props.paginatedSubscriptions || []).map((sub) => sub.id))
+    );
+
+    /** 当前分页命中组内任一条时显示组；组本身完整呈现但按首条排序锚定。 */
+    const visibleCollapsibleGroups = computed(() =>
+        collapsibleGroups.value.filter((group) =>
+            group.items.some((item) => pageSubscriptionIds.value.has(item.id))
+        )
+    );
+
+    /** 单条目站点仅在当前页平铺展示。 */
     const ungroupedSubscriptions = computed(() =>
-        groupedSubscriptions.value.filter((g) => g.items.length === 1).flatMap((g) => g.items)
+        groupedSubscriptions.value
+            .filter((g) => g.items.length === 1 && pageSubscriptionIds.value.has(g.items[0].id))
+            .flatMap((g) => g.items)
     );
 
     const toggleGroup = (key) => {
@@ -445,7 +461,7 @@
         <div v-else-if="paginatedSubscriptions.length > 0" class="space-y-4">
             <!-- 按站点分组：同站点的多个订阅源折叠为一组 -->
             <template v-if="isGrouped">
-                <template v-for="group in collapsibleGroups" :key="group.key">
+                <template v-for="group in visibleCollapsibleGroups" :key="group.key">
                     <div
                         class="rounded-xl border border-gray-100/80 bg-white/70 shadow-sm dark:border-white/10 dark:bg-gray-900/50"
                     >

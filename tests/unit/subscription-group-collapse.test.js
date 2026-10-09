@@ -77,28 +77,26 @@ describe('订阅源按站点折叠', () => {
         expect(wrapper.find('[aria-expanded="true"]').exists()).toBe(true);
     });
 
-    it('用户展开后搜索过滤与分页切换仍按当前页合组且不重置展开状态', async () => {
+    it('搜索结果跨页时仍显示完整同站点分组，单条目只显示在当前页', async () => {
         const subs = [
             makeSub('a', 's1', 'https://api.foo.example.com/1'),
             makeSub('b', 's2', 'https://sub.foo.example.com/2'),
             makeSub('c', 's3', 'https://foo.example.com/3'),
             makeSub('d', 'other', 'https://other.example.net/1'),
         ];
-        const wrapper = mountPanel(subs);
-        const toggle = wrapper.find('[aria-expanded="false"]');
-        await toggle.trigger('click');
-        expect(wrapper.find('[aria-expanded="true"]').exists()).toBe(true);
-
-        // 模拟搜索结果：跨子域仍合为一组；随后模拟分页数据更新，保留用户的展开态。
+        const wrapper = mountPanel(subs.slice(0, 2));
         await wrapper.setProps({
-            subscriptions: subs.slice(0, 3),
+            subscriptions: subs,
             paginatedSubscriptions: subs.slice(0, 2),
         });
-        expect(wrapper.findAll('.stub-card')).toHaveLength(2);
-        expect(wrapper.find('[aria-expanded="true"]').exists()).toBe(true);
-        await wrapper.setProps({ paginatedSubscriptions: subs.slice(1, 3) });
-        expect(wrapper.findAll('.stub-card')).toHaveLength(2);
-        expect(wrapper.find('[aria-expanded="true"]').exists()).toBe(true);
+        // 当前页只命中组内两项，但完整同站点组的三项均出现，组头总数正确。
+        expect(wrapper.findAll('.stub-card')).toHaveLength(3);
+        expect(wrapper.find('[aria-expanded="false"]').text()).toContain('3');
+
+        // 下一页命中该组的第三项时仍显示完整组，并显示当前页的单条目。
+        await wrapper.setProps({ paginatedSubscriptions: subs.slice(2, 4) });
+        expect(wrapper.findAll('.stub-card')).toHaveLength(4);
+        expect(wrapper.find('[aria-expanded="false"]').text()).toContain('3');
     });
 
     it('wd-blue sources group by airport root across subdomains and URLs', async () => {
