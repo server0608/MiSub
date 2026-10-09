@@ -164,6 +164,7 @@
     // 同一家机场常有多个订阅链接（域名相同、路径 token 不同），逐个平铺会很乱。
     // 这里按 URL 的域名自动聚合，同一站点的订阅源折叠为一组，可展开查看。
     const collapsedGroups = ref(new Set());
+    const knownGroupKeys = ref(new Set());
 
     /** 从订阅 URL 提取站点标识（域名）；非 http 链接归入「其他」。 */
     const siteKeyOf = (sub) => {
@@ -216,18 +217,16 @@
 
     const isGroupCollapsed = (key) => collapsedGroups.value.has(key);
 
-    // 默认收起同站点的多订阅组；新出现的站点也自动收起，已手动展开的组保持展开。
+    // 仅对新出现的分组应用默认折叠；过滤/分页更新时保留用户手动展开状态。
+    // 已消失分组的状态保留在本组件生命周期内，避免搜索/分页切换后忘记用户选择。
     watch(
         collapsibleGroups,
         (groups) => {
             const next = new Set(collapsedGroups.value);
             groups.forEach((group) => {
-                if (!next.has(group.key)) next.add(group.key);
+                if (!knownGroupKeys.value.has(group.key)) next.add(group.key);
             });
-            const visibleKeys = new Set(groups.map((group) => group.key));
-            for (const key of next) {
-                if (!visibleKeys.has(key)) next.delete(key);
-            }
+            groups.forEach((group) => knownGroupKeys.value.add(group.key));
             collapsedGroups.value = next;
         },
         { immediate: true }

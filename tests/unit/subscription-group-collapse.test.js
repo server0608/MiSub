@@ -62,6 +62,19 @@ describe('订阅源按站点折叠', () => {
         expect(wrapper.html()).toMatch(/折叠全部|Collapse all/);
     });
 
+    it('用户展开分组后，分页/列表更新不会再次自动收起该站点', async () => {
+        const subs = [
+            makeSub('a', 's1', 'https://same.example.com/1'),
+            makeSub('b', 's2', 'https://same.example.com/2'),
+        ];
+        const wrapper = mountPanel(subs);
+        await wrapper.find('[aria-expanded="false"]').trigger('click');
+        expect(wrapper.find('[aria-expanded="true"]').exists()).toBe(true);
+
+        await wrapper.setProps({ paginatedSubscriptions: [...subs] });
+        expect(wrapper.find('[aria-expanded="true"]').exists()).toBe(true);
+    });
+
     it('单条目站点不折叠，直接平铺', async () => {
         const subs = [
             makeSub('a', 'a', 'https://only-one.example.com/sub'),

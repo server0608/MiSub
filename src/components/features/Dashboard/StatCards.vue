@@ -1,5 +1,5 @@
 <script setup>
-    import { computed, ref, onMounted } from 'vue';
+    import { computed, ref } from 'vue';
     import { useI18n } from '@/i18n/index.js';
 
     const { t } = useI18n();
@@ -56,13 +56,7 @@
     );
     const hasProfileWarning = computed(() => props.activeProfilesCount === 0);
 
-    const isVisible = ref(false);
-
-    onMounted(() => {
-        setTimeout(() => {
-            isVisible.value = true;
-        }, 100);
-    });
+    const isVisible = ref(true);
 
     const cardBaseClass =
         'stat-card group w-full text-left bg-white/90 dark:bg-gray-900/70 p-4 misub-radius-lg shadow-sm border transition-all duration-500 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-500/30';
@@ -372,7 +366,7 @@
             transform 0.6s cubic-bezier(0.16, 1, 0.3, 1),
             box-shadow 0.2s ease,
             border-color 0.2s ease;
-        transition-delay: var(--delay);
+        transition-delay: 0ms;
     }
 
     .stat-card-visible {

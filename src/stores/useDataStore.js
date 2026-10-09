@@ -68,8 +68,10 @@ export const useDataStore = defineStore('data', () => {
         }
     }
 
+    let fetchDataPromise = null;
+
     async function fetchData(forceRefresh = false) {
-        if (isLoading.value) return false;
+        if (fetchDataPromise) return fetchDataPromise;
 
         // Effective Cache Check
         if (hasDataLoaded.value && !forceRefresh) return true;
@@ -82,6 +84,7 @@ export const useDataStore = defineStore('data', () => {
             }
         }
 
+        fetchDataPromise = (async () => {
         isLoading.value = true;
         try {
             const data = await api.get('/api/data');
@@ -103,7 +106,10 @@ export const useDataStore = defineStore('data', () => {
             return false;
         } finally {
             isLoading.value = false;
+            fetchDataPromise = null;
         }
+        })();
+        return fetchDataPromise;
     }
 
     async function saveData() {

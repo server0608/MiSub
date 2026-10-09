@@ -89,9 +89,15 @@
     <div class="border border-gray-200 dark:border-gray-700 misub-radius-md overflow-hidden">
         <!-- 折叠头部 -->
         <div
-            @click="emit('toggle-expand')"
-            class="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-800/50 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
+            class="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
         >
+            <button
+                type="button"
+                @click="emit('toggle-expand')"
+                :aria-expanded="isRuleExpanded"
+                aria-controls="sub-edit-rule-content"
+                class="flex flex-1 items-center gap-2 text-left cursor-pointer"
+            >
             <div class="flex items-center gap-2">
                 <svg
                     class="w-4 h-4 text-gray-500 transition-transform duration-200"
@@ -107,9 +113,9 @@
                         d="M9 5l7 7-7 7"
                     />
                 </svg>
-                <label
+                <span
                     class="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer"
-                    >{{ t('subscriptions.includeExclude') }}</label
+                    >{{ t('subscriptions.includeExclude') }}</span
                 >
                 <span
                     v-if="selectedRules.length > 0"
@@ -118,6 +124,7 @@
                     {{ selectedRules.length }}
                 </span>
             </div>
+            </button>
             <div class="flex items-center gap-2" @click.stop>
                 <button
                     v-if="!isAdvancedMode"
@@ -140,6 +147,7 @@
         <Transition name="collapse">
             <div
                 v-show="isRuleExpanded"
+                id="sub-edit-rule-content"
                 class="px-4 py-3 border-t border-gray-200 dark:border-gray-700"
             >
                 <!-- 可视化模式 -->
@@ -148,6 +156,7 @@
                     <div class="flex gap-2">
                         <button
                             @click="ruleModeModel = 'exclude'"
+                            :aria-pressed="ruleModeModel === 'exclude'"
                             :class="[
                                 'flex-1 sm:flex-none px-3 py-1.5 text-xs sm:text-sm font-medium misub-radius-md transition-all !min-h-0 !min-w-0',
                                 ruleModeModel === 'exclude'
@@ -159,6 +168,7 @@
                         </button>
                         <button
                             @click="ruleModeModel = 'keep'"
+                            :aria-pressed="ruleModeModel === 'keep'"
                             :class="[
                                 'flex-1 sm:flex-none px-3 py-1.5 text-xs sm:text-sm font-medium misub-radius-md transition-all !min-h-0 !min-w-0',
                                 ruleModeModel === 'keep'
@@ -180,6 +190,7 @@
                                 v-for="tag in presetRegions"
                                 :key="tag.pattern"
                                 @click="toggleTag(tag, 'region')"
+                                :aria-pressed="isSelected(tag.pattern)"
                                 :class="[
                                     'px-2.5 py-1 text-xs sm:text-sm font-medium misub-radius-md transition-all !min-h-0 !min-w-0',
                                     isSelected(tag.pattern)
@@ -202,6 +213,7 @@
                                 v-for="tag in presetProtocols"
                                 :key="tag.pattern"
                                 @click="toggleTag(tag, 'protocol')"
+                                :aria-pressed="isSelected(tag.pattern)"
                                 :class="[
                                     'px-2.5 py-1 text-xs sm:text-sm font-medium misub-radius-md transition-all !min-h-0 !min-w-0',
                                     isSelected(tag.pattern)
@@ -224,6 +236,7 @@
                                 v-for="tag in presetKeywords"
                                 :key="tag.pattern"
                                 @click="toggleTag(tag, 'keyword')"
+                                :aria-pressed="isSelected(tag.pattern)"
                                 :class="[
                                     'px-2.5 py-1 text-xs sm:text-sm font-medium misub-radius-md transition-all !min-h-0 !min-w-0',
                                     isSelected(tag.pattern)
@@ -339,6 +352,8 @@
                     </div>
                     <textarea
                         id="sub-edit-exclude"
+                        :aria-invalid="excludeRuleState.errors.length > 0 ? 'true' : 'false'"
+                        :aria-describedby="excludeRuleState.errors.length ? 'sub-edit-exclude-error' : undefined"
                         v-model="editingSubscription.exclude"
                         :placeholder="t('subscriptions.excludePlaceholder')"
                         rows="8"
@@ -351,6 +366,8 @@
                     ></textarea>
                     <div
                         v-if="excludeRuleState.errors.length"
+                        id="sub-edit-exclude-error"
+                        role="alert"
                         class="mt-2 text-xs text-red-600 dark:text-red-400"
                     >
                         {{

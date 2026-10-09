@@ -90,6 +90,7 @@
     ]);
 
     const selectedKeys = ref([]);
+    const selectedKeySet = computed(() => new Set(selectedKeys.value));
     const sortField = ref('');
     const sortOrder = ref(''); // 'asc', 'desc', ''
 
@@ -145,7 +146,7 @@
     // 选择相关方法
     const isRowSelected = (row) => {
         const key = row[props.rowKey];
-        return selectedKeys.value.includes(key);
+        return selectedKeySet.value.has(key);
     };
 
     const toggleRowSelection = (row) => {
@@ -161,7 +162,7 @@
         }
 
         const selectedRows = props.data.filter((row) =>
-            selectedKeys.value.includes(row[props.rowKey])
+            selectedKeySet.value.has(row[props.rowKey])
         );
 
         emit('update:selectedRows', selectedRows);
@@ -176,7 +177,7 @@
         }
 
         const selectedRows = props.data.filter((row) =>
-            selectedKeys.value.includes(row[props.rowKey])
+            selectedKeySet.value.has(row[props.rowKey])
         );
 
         emit('update:selectedRows', selectedRows);
