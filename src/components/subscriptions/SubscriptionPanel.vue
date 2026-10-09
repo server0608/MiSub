@@ -5,6 +5,7 @@
     import MoreActionsMenu from '@/components/shared/MoreActionsMenu.vue';
     import PanelPagination from '@/components/shared/PanelPagination.vue';
     import EmptyState from '@/components/ui/EmptyState.vue';
+    import Modal from '@/components/forms/Modal.vue';
     import { useUIStore } from '@/stores/ui';
     import { useI18n } from '@/i18n/index.js';
     import { inferAirportRootDomain } from '../../utils/airport-domain.js';
@@ -130,14 +131,10 @@
     const handleSplitAirportGroup = (group) => {
         // 禁止后续域名启发式再次合并：每个订阅获得独立身份，但保留可识别的显示名。
         group.items.forEach((item) => {
-            emit(
-                'split-airport-group',
-                [item.id],
-                {
-                    groupId: createAirportGroupId(),
-                    name: item.airportIdentity?.name || groupDetectedName(group),
-                }
-            );
+            emit('split-airport-group', [item.id], {
+                groupId: createAirportGroupId(),
+                name: item.airportIdentity?.name || groupDetectedName(group),
+            });
         });
     };
     const handleConfirmDetectedName = (group) => {
@@ -373,50 +370,7 @@
                     >
                         {{ t('subscriptions.assignAirportGroup') }}
                     </button>
-                    <div
-                        v-if="showAirportIdentityEditor"
-                        class="mt-4 rounded-lg border border-primary-200 bg-primary-50/60 p-3 dark:border-primary-500/30 dark:bg-primary-500/5"
-                    >
-                        <label class="block text-xs font-medium text-gray-600 dark:text-gray-300">{{
-                            t('subscriptions.chooseAirportGroup')
-                        }}</label>
-                        <select
-                            v-model="selectedAirportGroup"
-                            class="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm dark:border-white/15 dark:bg-gray-900 dark:text-white"
-                        >
-                            <option value="">{{ t('subscriptions.newAirportGroupName') }}</option>
-                            <option
-                                v-for="airport in availableAirportGroups"
-                                :key="airport.groupId"
-                                :value="airport.groupId"
-                            >
-                                {{ airport.name }}
-                            </option>
-                        </select>
-                        <input
-                            v-if="!selectedAirportGroup"
-                            v-model="groupNameInput"
-                            class="mt-2 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm dark:border-white/15 dark:bg-gray-900 dark:text-white"
-                            :placeholder="t('subscriptions.newAirportGroupName')"
-                        />
-                        <div class="mt-2 flex justify-end gap-2">
-                            <button
-                                type="button"
-                                class="rounded-md px-3 py-1.5 text-sm text-gray-600"
-                                @click="showAirportIdentityEditor = false"
-                            >
-                                {{ t('actions.cancel') }}
-                            </button>
-                            <button
-                                type="button"
-                                class="rounded-md bg-primary-600 px-3 py-1.5 text-sm text-white"
-                                :disabled="!selectedAirportGroup && !groupNameInput.trim()"
-                                @click="saveAirportIdentity"
-                            >
-                                {{ t('subscriptions.saveAirportIdentity') }}
-                            </button>
-                        </div>
-                    </div>
+
                     <button
                         @click="handleImport"
                         class="shrink-0 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-white/10 dark:bg-white/5 dark:text-gray-200 dark:hover:bg-white/10"
@@ -602,32 +556,36 @@
                                 >
                                     {{ t('subscriptions.renameGroup') }}
                                 </button>
-                            <button
-                                type="button"
-                                class="rounded-md border border-gray-300/60 px-2 py-1 text-[11px] font-medium text-gray-600 hover:bg-gray-500/10 dark:border-white/15 dark:text-gray-300"
-                                :title="t('subscriptions.assignAirportGroup')"
-                                @click.stop="openAirportIdentityEditor(group.items.map((item) => item.id))"
-                            >
-                                {{ t('subscriptions.assignAirportGroup') }}
-                            </button>
-                            <button
-                                v-if="group.items.length > 1"
-                                type="button"
-                                class="rounded-md border border-gray-300/60 px-2 py-1 text-[11px] font-medium text-gray-600 hover:bg-gray-500/10 dark:border-white/15 dark:text-gray-300"
-                                :title="t('subscriptions.splitAirportGroup')"
-                                @click.stop="handleSplitAirportGroup(group)"
-                            >
-                                {{ t('subscriptions.splitAirportGroup') }}
-                            </button>
-                            <button
-                                v-if="group.items.some((item) => item.airportIdentity?.groupId)"
-                                type="button"
-                                class="rounded-md border border-gray-300/60 px-2 py-1 text-[11px] font-medium text-gray-600 hover:bg-gray-500/10 dark:border-white/15 dark:text-gray-300"
-                                :title="t('subscriptions.automaticAirportIdentity')"
-                                @click.stop="handleResetGroup(group)"
-                            >
-                                {{ t('subscriptions.automaticAirportIdentity') }}
-                            </button>
+                                <button
+                                    type="button"
+                                    class="rounded-md border border-gray-300/60 px-2 py-1 text-[11px] font-medium text-gray-600 hover:bg-gray-500/10 dark:border-white/15 dark:text-gray-300"
+                                    :title="t('subscriptions.assignAirportGroup')"
+                                    @click.stop="
+                                        openAirportIdentityEditor(
+                                            group.items.map((item) => item.id)
+                                        )
+                                    "
+                                >
+                                    {{ t('subscriptions.assignAirportGroup') }}
+                                </button>
+                                <button
+                                    v-if="group.items.length > 1"
+                                    type="button"
+                                    class="rounded-md border border-gray-300/60 px-2 py-1 text-[11px] font-medium text-gray-600 hover:bg-gray-500/10 dark:border-white/15 dark:text-gray-300"
+                                    :title="t('subscriptions.splitAirportGroup')"
+                                    @click.stop="handleSplitAirportGroup(group)"
+                                >
+                                    {{ t('subscriptions.splitAirportGroup') }}
+                                </button>
+                                <button
+                                    v-if="group.items.some((item) => item.airportIdentity?.groupId)"
+                                    type="button"
+                                    class="rounded-md border border-gray-300/60 px-2 py-1 text-[11px] font-medium text-gray-600 hover:bg-gray-500/10 dark:border-white/15 dark:text-gray-300"
+                                    :title="t('subscriptions.automaticAirportIdentity')"
+                                    @click.stop="handleResetGroup(group)"
+                                >
+                                    {{ t('subscriptions.automaticAirportIdentity') }}
+                                </button>
                                 <span class="text-xs text-gray-500 dark:text-gray-400">{{
                                     isGroupCollapsed(group.key)
                                         ? t('subscriptions.expand')
@@ -760,6 +718,46 @@
                 @change-page="handleChangePage"
             />
         </div>
+        <Modal
+            :show="showAirportIdentityEditor"
+            size="md"
+            :confirm-text="t('subscriptions.saveAirportIdentity')"
+            :confirm-disabled="!selectedAirportGroup && !groupNameInput.trim()"
+            @update:show="showAirportIdentityEditor = $event"
+            @confirm="saveAirportIdentity"
+        >
+            <template #title>
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white">
+                    {{ t('subscriptions.assignAirportGroup') }}
+                </h3>
+            </template>
+            <template #body>
+                <div class="space-y-4">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                        {{ t('subscriptions.chooseAirportGroup') }}
+                    </p>
+                    <select
+                        v-model="selectedAirportGroup"
+                        class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-primary-500 dark:border-white/15 dark:bg-gray-800 dark:text-white"
+                    >
+                        <option value="">{{ t('subscriptions.newAirportGroupName') }}</option>
+                        <option
+                            v-for="airport in availableAirportGroups"
+                            :key="airport.groupId"
+                            :value="airport.groupId"
+                        >
+                            {{ airport.name }}
+                        </option>
+                    </select>
+                    <input
+                        v-if="!selectedAirportGroup"
+                        v-model="groupNameInput"
+                        class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-primary-500 dark:border-white/15 dark:bg-gray-800 dark:text-white"
+                        :placeholder="t('subscriptions.newAirportGroupName')"
+                    />
+                </div>
+            </template>
+        </Modal>
     </div>
 </template>
 

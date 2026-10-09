@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils';
+import { DOMWrapper, mount } from '@vue/test-utils';
 import { createPinia } from 'pinia';
 import { describe, expect, it } from 'vitest';
 import SubscriptionPanel from '../../src/components/subscriptions/SubscriptionPanel.vue';
@@ -12,6 +12,7 @@ const baseProps = {
 
 function mountPanel(props = {}) {
     return mount(SubscriptionPanel, {
+        attachTo: document.body,
         props: {
             ...baseProps,
             subscriptions: [],
@@ -147,5 +148,54 @@ describe('SubscriptionPanel UX', () => {
 
         expect(search.attributes('placeholder')).toBe('搜索名称、备注或链接');
         expect(search.attributes('aria-label')).toBe('搜索机场订阅名称、备注或链接...');
+    });
+
+    it('opens the assignment dialog, cancels, and submits selected group for all subscriptions', async () => {
+        const subscriptions = [
+            {
+                id: 's1',
+                name: 'Alpha',
+                url: 'https://alpha.test/a',
+                airportIdentity: { groupId: 'g1', name: 'Existing' },
+            },
+            { id: 's2', name: 'Beta', url: 'https://beta.test/b' },
+        ];
+        const wrapper = mountPanel({ subscriptions, paginatedSubscriptions: subscriptions });
+        await wrapper.get('button[title="指定机场分组"]').trigger('click');
+        expect(document.body.querySelector('[role="dialog"]')).not.toBeNull();
+        const dialogButtons = () =>
+            Array.from(document.body.querySelectorAll('[role="dialog"] button')).map(
+                (el) => new DOMWrapper(el)
+            );
+        await dialogButtons().find((button) => button.text() === '取消').trigger('click');
+        expect(wrapper.emitted('assign-airport-group')).toBeUndefined();
+
+        await wrapper.get('button[title="指定机场分组"]').trigger('click');
+        await new DOMWrapper(document.body.querySelector('[role="dialog"] select')).setValue('g1');
+        await dialogButtons().find((button) => button.text() === '保存机场归属').trigger('click');
+        expect(wrapper.emitted('assign-airport-group')).toEqual([
+            [['s1', 's2'], { groupId: 'g1', name: 'Existing' }],
+        ]);
+    });
+
+    it('submits a new identity using the selected group row subscription IDs', async () => {
+        const subscriptions = [
+            { id: 's1', name: 'A', url: 'https://same.test/a' },
+            { id: 's2', name: 'B', url: 'https://same.test/b' },
+            { id: 's3', name: 'C', url: 'https://other.test/c' },
+        ];
+        const wrapper = mountPanel({ subscriptions, paginatedSubscriptions: subscriptions });
+        await wrapper.findAll('button[title="指定机场分组"]')[1].trigger('click');
+        const dialogQuery = (selector) =>
+            new DOMWrapper(document.body.querySelector(`[role="dialog"] ${selector}`));
+        await dialogQuery('input[placeholder="新机场名称"]').setValue('New Airport');
+        const saveButton = Array.from(document.body.querySelectorAll('[role="dialog"] button'))
+            .map((el) => new DOMWrapper(el))
+            .find((button) => button.text() === '保存机场归属');
+        await saveButton.trigger('click');
+        const [[ids, identity]] = wrapper.emitted('assign-airport-group');
+        expect(ids).toEqual(['s1', 's2']);
+        expect(identity).toMatchObject({ name: 'New Airport' });
+        expect(identity.groupId).toBeTruthy();
     });
 });
