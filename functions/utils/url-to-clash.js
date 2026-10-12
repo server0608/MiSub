@@ -1259,10 +1259,12 @@ function parseHttpsUrl(url, isTls = true) {
         // https://username:password@server:port?params#name
         const body = url.substring(isTls ? 8 : 7);
         const atIndex = body.indexOf('@');
-        if (atIndex === -1) return null;
-
-        let userInfo = body.substring(0, atIndex);
-        let serverPart = body.substring(atIndex + 1);
+        let userInfo = '';
+        let serverPart = body;
+        if (atIndex !== -1) {
+            userInfo = body.substring(0, atIndex);
+            serverPart = body.substring(atIndex + 1);
+        }
 
         const queryIndex = serverPart.indexOf('?');
         const hashIndex = serverPart.indexOf('#');
@@ -1485,6 +1487,33 @@ function parseSsdUrl(url) {
  */
 export function urlToClashProxy(url) {
     if (!url || typeof url !== 'string') return null;
+
+    if (/^mierus:\/\//i.test(url)) {
+        try {
+            const body = url.slice(url.indexOf('//') + 2);
+            const hashIndex = body.indexOf('#');
+            const beforeHash = hashIndex < 0 ? body : body.slice(0, hashIndex);
+            const queryIndex = beforeHash.indexOf('?');
+            const authority = queryIndex < 0 ? beforeHash : beforeHash.slice(0, queryIndex);
+            const query = new URLSearchParams(queryIndex < 0 ? '' : beforeHash.slice(queryIndex + 1));
+            let server;
+            let port;
+            if (authority.startsWith('[')) {
+                const end = authority.indexOf(']');
+                server = authority.slice(1, end);
+                port = Number(authority.slice(end + 2));
+            } else {
+                const split = authority.lastIndexOf(':');
+                server = authority.slice(0, split);
+                port = Number(authority.slice(split + 1));
+            }
+            const proxy = { name: extractName(url) || `Mieru-${server}`, type: 'mieru', server, port };
+            for (const key of ['username', 'password', 'transport', 'handshake-mode', 'profile']) if (query.has(key)) proxy[key] = query.get(key);
+            for (const key of ['udp', 'multiplexing']) if (query.has(key)) proxy[key] = query.get(key) === 'true';
+            if (query.has('mtu')) proxy.mtu = Number(query.get('mtu'));
+            return proxy;
+        } catch { return null; }
+    }
 
     const lowerUrl = url.toLowerCase();
 

@@ -31,6 +31,14 @@ export function convertClashProxyToUrl(proxy) {
 
         if (!server || !port) return null;
 
+        if (type === 'mieru') {
+            const params = new URLSearchParams();
+            for (const key of ['username', 'password', 'transport', 'udp', 'multiplexing', 'handshake-mode', 'mtu', 'profile']) {
+                if (proxy[key] !== undefined && proxy[key] !== null) params.set(key, String(proxy[key]));
+            }
+            return `mierus://${formatUriServer(server)}:${port}?${params.toString()}#${encodeURIComponent(name)}`;
+        }
+
         if (type === 'http' || type === 'https') {
             const scheme = type === 'https' ? 'https' : 'http';
             const userInfo = proxy.username
