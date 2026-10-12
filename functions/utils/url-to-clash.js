@@ -1290,12 +1290,13 @@ function parseHttpsUrl(url, isTls = true) {
 
         const proxy = {
             name: name || `HTTPS-${server}`,
-            type: isTls ? 'https' : 'http',
+            type: 'http',
             server,
             port,
             username,
             password,
         };
+        if (isTls) proxy.tls = true;
 
         if (params.get('sni')) {
             proxy.servername = params.get('sni');
