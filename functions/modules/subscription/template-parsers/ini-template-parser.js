@@ -168,7 +168,7 @@ function parseAclProxyGroupLine(line) {
  * 前缀省略时默认为 "<落地组名> - "。
  */
 function parseChainProxyLine(line) {
-    const raw = line.replace(/^custom_chain_proxy=/i, '');
+    const raw = line.replace(/^\s*/, '').replace(/^custom_chain_proxy=/i, '');
     const parts = raw.split('`');
     const group = (parts[0] || '').trim();
     const entry = (parts[1] || '').trim();

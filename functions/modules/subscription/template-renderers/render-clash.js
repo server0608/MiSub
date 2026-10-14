@@ -165,9 +165,11 @@ function mapRule(rule, ruleProviderMap) {
 export function renderClashFromTemplateModel(model) {
     const normalizedModel = normalizeUnifiedTemplateModel(model);
 
-    // 链式代理（dialer-proxy）为 Mihomo/Meta 专属能力，仅在客户端支持时展开。
-    if (normalizedModel.meta?.isMeta) {
-        applyMihomoChainProxy(normalizedModel);
+    // 所有客户端都保留链式策略组；仅 Mihomo/Meta 展开节点级 dialer-proxy。
+    if (Array.isArray(normalizedModel.extras?.chainProxy)) {
+        applyMihomoChainProxy(normalizedModel, {
+            enableDialerProxy: Boolean(normalizedModel.meta?.isMeta),
+        });
     }
 
     const ruleProviders = {};

@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import yaml from 'js-yaml';
+import { parseIniTemplate } from '../../functions/modules/subscription/template-parsers/ini-template-parser.js';
+import { applySmartModelOptimizations } from '../../functions/modules/subscription/template-processor.js';
+import { renderClashFromTemplateModel } from '../../functions/modules/subscription/template-renderers/render-clash.js';
 import { renderClashFromIniTemplate } from '../../functions/modules/subscription/template-pipeline.js';
 
 const PROXIES = [
@@ -8,11 +11,12 @@ const PROXIES = [
 ];
 
 function render(template, options = {}) {
+    const { proxies = PROXIES, ...renderOptions } = options;
     return yaml.load(
         renderClashFromIniTemplate(template, {
-            proxies: PROXIES.map((proxy) => ({ ...proxy })),
+            proxies: proxies.map((proxy) => ({ ...proxy })),
             ruleLevel: 'none',
-            ...options,
+            ...renderOptions,
         })
     );
 }
@@ -42,6 +46,29 @@ describe('Mihomo chain proxy', () => {
         expect(landing.proxies).toEqual(['🔗 链式前置']);
     });
 
+    it('creates plain fallback groups for non-Meta clients when groups are omitted', () => {
+        const parsed = render(
+            [
+                '[custom]',
+                `  custom_chain_proxy=🔗 落地\`🔗 入口`,
+                '',
+                '[Rule]',
+                'MATCH,🔗 落地',
+            ].join('\n'),
+            { isMeta: false }
+        );
+
+        expect(parsed.proxies.every((proxy) => proxy['dialer-proxy'] === undefined)).toBe(true);
+        expect(parsed['proxy-groups'].find((item) => item.name === '🔗 落地').proxies).toEqual([
+            'HK-01',
+            'JP-01',
+        ]);
+        expect(parsed['proxy-groups'].find((item) => item.name === '🔗 入口').proxies).toEqual([
+            'HK-01',
+            'JP-01',
+        ]);
+    });
+
     it('expands landing copies with dialer-proxy for Meta clients', () => {
         const parsed = render(CHAIN_TEMPLATE, { isMeta: true });
 
@@ -60,12 +87,52 @@ describe('Mihomo chain proxy', () => {
         expect(landing.proxies).toEqual(['🔗 链式落地 - HK-01', '🔗 链式落地 - JP-01']);
     });
 
+    it('does not mutate the source model when rendered repeatedly', () => {
+        const sharedProxies = PROXIES.map((proxy) => ({ ...proxy }));
+        const model = applySmartModelOptimizations(
+            parseIniTemplate(CHAIN_TEMPLATE, {
+                proxies: sharedProxies,
+                isMeta: true,
+                ruleLevel: 'none',
+            })
+        );
+        const first = yaml.load(renderClashFromTemplateModel(model));
+        const second = yaml.load(renderClashFromTemplateModel(model));
+
+        expect(first.proxies.filter((proxy) => proxy['dialer-proxy'])).toHaveLength(2);
+        expect(second.proxies.filter((proxy) => proxy['dialer-proxy'])).toHaveLength(2);
+        expect(model.proxies).toHaveLength(2);
+        expect(sharedProxies).toHaveLength(2);
+        expect(sharedProxies.every((proxy) => proxy['dialer-proxy'] === undefined)).toBe(true);
+    });
+
     it('keeps the entry group free of landing copies to avoid dialer-proxy loops', () => {
         const parsed = render(CHAIN_TEMPLATE, { isMeta: true });
 
         const entry = parsed['proxy-groups'].find((item) => item.name === '🔗 链式前置');
         expect(entry.proxies).toEqual(['HK-01', 'JP-01']);
         expect(entry.proxies.some((name) => String(name).startsWith('🔗 链式落地'))).toBe(false);
+    });
+
+    it('removes dynamic entry membership options that could reintroduce landing copies', () => {
+        const parsed = render(
+            [
+                '[Proxy Group]',
+                '落地 = select, 入口',
+                '入口 = select, include-all=true',
+                '',
+                '[custom]',
+                `custom_chain_proxy=落地\`入口`,
+                '',
+                '[Rule]',
+                'MATCH,落地',
+            ].join('\n'),
+            { isMeta: true }
+        );
+
+        const entry = parsed['proxy-groups'].find((item) => item.name === '入口');
+        expect(entry.proxies).toEqual(['HK-01', 'JP-01']);
+        expect(entry['include-all']).toBeUndefined();
     });
 
     it('leaves templates without custom_chain_proxy untouched', () => {
