@@ -150,6 +150,17 @@ describe('serializeXhttpExtra 反向序列化', () => {
         expect(serializeXhttpExtra({ path: '/x', host: 'h', mode: 'auto' })).toBeNull();
         expect(serializeXhttpExtra(null)).toBeNull();
     });
+
+    it('reuse-settings 没有可转换字段时不输出空 xmux', () => {
+        expect(
+            serializeXhttpExtra({ 'reuse-settings': { 'h-keep-alive-period': '30' } })
+        ).toBeNull();
+        expect(
+            serializeXhttpExtra({
+                'download-settings': { 'reuse-settings': { 'h-keep-alive-period': '30' } },
+            })
+        ).toBeNull();
+    });
 });
 
 const EXTRA_PARAM = encodeURIComponent(JSON.stringify(FULL_EXTRA));
@@ -277,5 +288,27 @@ describe('downloadSettings 安全块映射', () => {
             'client-fingerprint': 'safari',
             'reality-opts': { 'public-key': 'rpk', 'short-id': 'rsid' },
         });
+    });
+
+    it('security=reality 缺少 publicKey 时应显式清空并告警', () => {
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        const opts = parseXhttpExtra({
+            downloadSettings: {
+                address: 'dl.example.com',
+                security: 'reality',
+                tlsSettings: { serverName: 'tls.example.com', fingerprint: 'firefox' },
+                realitySettings: { serverName: 'reality.example.com', fingerprint: 'safari' },
+            },
+        });
+
+        expect(opts['download-settings']).toEqual({
+            server: 'dl.example.com',
+            tls: true,
+            servername: 'reality.example.com',
+            'client-fingerprint': 'safari',
+            'reality-opts': { 'public-key': '' },
+        });
+        expect(warn).toHaveBeenCalled();
+        warn.mockRestore();
     });
 });

@@ -2,7 +2,8 @@
  * VLESS xHTTP extra 字段双向映射。
  *
  * 字段表以 mihomo 的 common/convert/v.go 与 adapter/outbound/vless.go 为准。
- * 这里保持纯函数、不负责 URL 解析与错误日志，避免转换逻辑和 HTTP 细节互相牵扯。
+ * 这里保持纯函数、不负责 URL 解析；除 REALITY 缺公钥的告警外不写日志，
+ * 避免转换逻辑和 HTTP 细节互相牵扯。
  */
 
 function isPlainObject(value) {
@@ -152,7 +153,11 @@ function serializeDownloadSettings(ds) {
         xhttpSettings.headers = { ...ds.headers };
     }
     if (isPlainObject(ds['reuse-settings']) && Object.keys(ds['reuse-settings']).length > 0) {
-        xhttpSettings.extra = { xmux: reuseSettingsToXmux(ds['reuse-settings']) };
+        const xmux = reuseSettingsToXmux(ds['reuse-settings']);
+        // 与正向映射一致：没有可转换字段时不输出空对象，避免生成无意义的 xmux。
+        if (Object.keys(xmux).length > 0) {
+            xhttpSettings.extra = { xmux };
+        }
     }
     if (Object.keys(xhttpSettings).length > 0) {
         out.xhttpSettings = xhttpSettings;
@@ -296,7 +301,8 @@ export function serializeXhttpExtra(xhttpOpts) {
         isPlainObject(xhttpOpts['reuse-settings']) &&
         Object.keys(xhttpOpts['reuse-settings']).length > 0
     ) {
-        extra.xmux = reuseSettingsToXmux(xhttpOpts['reuse-settings']);
+        const xmux = reuseSettingsToXmux(xhttpOpts['reuse-settings']);
+        if (Object.keys(xmux).length > 0) extra.xmux = xmux;
     }
 
     if (isPlainObject(xhttpOpts['download-settings'])) {
