@@ -4,7 +4,7 @@
 
 import { extractNodeMetadata } from '../modules/utils/metadata-extractor.js';
 import { isLocalProxyEndpoint } from './node-utils.js';
-import { parseXhttpExtra } from './xhttp-extra.js';
+import { parseXhttpExtra, applyDownloadInheritanceGuard } from './xhttp-extra.js';
 
 const VIRTUAL_INFO_NODE_PASSWORD = '00000000-0000-0000-0000-000000000000';
 
@@ -294,6 +294,14 @@ function parseVlessUrl(url) {
         // [重要] dialer-proxy 链式代理
         if (params.get('dp')) {
             proxy['dialer-proxy'] = params.get('dp');
+        }
+
+        const xhttpOpts = proxy['xhttp-opts'];
+        if (xhttpOpts) {
+            const upstreamPublicKey = proxy['reality-opts'] && proxy['reality-opts']['public-key'];
+            applyDownloadInheritanceGuard(xhttpOpts, {
+                upstreamReality: typeof upstreamPublicKey === 'string' && upstreamPublicKey !== '',
+            });
         }
 
         return proxy;

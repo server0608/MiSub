@@ -146,6 +146,45 @@ function serializeDownloadSettings(ds) {
     if (typeof ds.server === 'string' && ds.server !== '') out.address = ds.server;
     if (typeof ds.port === 'number' && Number.isFinite(ds.port)) out.port = Math.trunc(ds.port);
 
+    // 空 public-key 既不是有效 REALITY，又是补偿步骤写入的清除标记，反向时不能当成 reality。
+    const publicKey = ds['reality-opts'] && ds['reality-opts']['public-key'];
+    const hasReality = typeof publicKey === 'string' && publicKey !== '';
+    if (hasReality) {
+        out.security = 'reality';
+        const realitySettings = { publicKey };
+        setNonEmptyString(ds['reality-opts'], 'short-id', realitySettings, 'shortId');
+        setNonEmptyString(ds, 'servername', realitySettings, 'serverName');
+        // chrome 是 Xray 两种 security 的缺省指纹；写回会把补偿产生的默认值固化成配置。
+        if (
+            typeof ds['client-fingerprint'] === 'string' &&
+            ds['client-fingerprint'] !== '' &&
+            ds['client-fingerprint'] !== 'chrome'
+        ) {
+            realitySettings.fingerprint = ds['client-fingerprint'];
+        }
+        out.realitySettings = realitySettings;
+    } else if (ds.tls === true) {
+        out.security = 'tls';
+        const tlsSettings = {};
+        setNonEmptyString(ds, 'servername', tlsSettings, 'serverName');
+        if (
+            typeof ds['client-fingerprint'] === 'string' &&
+            ds['client-fingerprint'] !== '' &&
+            ds['client-fingerprint'] !== 'chrome'
+        ) {
+            tlsSettings.fingerprint = ds['client-fingerprint'];
+        }
+        if (Array.isArray(ds.alpn) && ds.alpn.length > 0) {
+            tlsSettings.alpn = ds.alpn;
+        }
+        if (ds['skip-cert-verify'] === true) {
+            tlsSettings.allowInsecure = true;
+        }
+        if (Object.keys(tlsSettings).length > 0) {
+            out.tlsSettings = tlsSettings;
+        }
+    }
+
     const xhttpSettings = {};
     if (typeof ds.path === 'string' && ds.path !== '') xhttpSettings.path = ds.path;
     if (typeof ds.host === 'string' && ds.host !== '') xhttpSettings.host = ds.host;
@@ -311,4 +350,38 @@ export function serializeXhttpExtra(xhttpOpts) {
     }
 
     return Object.keys(extra).length > 0 ? extra : null;
+}
+
+/**
+ * 切断 mihomo 下行配置对上行 TLS / REALITY 字段的继承。
+ *
+ * Xray 的 downloadSettings 是独立 StreamConfig，缺省值不继承上行；mihomo 则在字段缺省时
+ * 回退上行值。这里把缺省值写成显式值，让两边语义一致。
+ */
+export function applyDownloadInheritanceGuard(xhttpOpts, { upstreamReality } = {}) {
+    const ds = xhttpOpts && xhttpOpts['download-settings'];
+    if (!isPlainObject(ds)) return xhttpOpts;
+
+    ds.tls = ds.tls === true;
+
+    const publicKey = ds['reality-opts'] && ds['reality-opts']['public-key'];
+    const downlinkReality = typeof publicKey === 'string' && publicKey !== '';
+    if (!downlinkReality && upstreamReality) {
+        // mihomo 只在 reality-opts 缺省时整份继承上行；空 public-key 会解析成 nil，
+        // 是唯一能表达“下行不是 REALITY”的写法（空对象会触发结构解码报错）。
+        ds['reality-opts'] = { 'public-key': '' };
+    }
+
+    if (!ds.tls) return xhttpOpts;
+
+    // 上行常是 REALITY 伪装域名，其 SNI / ALPN 对下行 CDN 是错误值；
+    // 空串与空数组在 mihomo 中同样是显式覆盖，不会回退上行。
+    if (typeof ds.servername !== 'string') ds.servername = '';
+    if (typeof ds['client-fingerprint'] !== 'string' || ds['client-fingerprint'] === '') {
+        ds['client-fingerprint'] = 'chrome';
+    }
+    if (!Array.isArray(ds.alpn)) ds.alpn = [];
+    if (typeof ds['skip-cert-verify'] !== 'boolean') ds['skip-cert-verify'] = false;
+
+    return xhttpOpts;
 }
