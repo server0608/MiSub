@@ -19,6 +19,18 @@ function setNonEmptyString(source, sourceKey, target, targetKey) {
     }
 }
 
+// mihomo 的头表是 map[string]string；extra 由外部 JSON 控制，
+// 非字符串值会让整份配置解码失败，因此按字段类型不符处理并跳过。
+function copyStringHeaders(headers) {
+    const result = {};
+    for (const [key, value] of Object.entries(headers)) {
+        if (typeof value === 'string') {
+            result[key] = value;
+        }
+    }
+    return result;
+}
+
 // Xray 的分包参数允许数字或区间字符串，mihomo 的配置层统一按字符串处理。
 function setRangeField(source, sourceKey, target, targetKey) {
     const value = source[sourceKey];
@@ -99,8 +111,11 @@ function parseDownloadSettings(settings) {
     if (xhttp) {
         setNonEmptyString(xhttp, 'path', ds, 'path');
         setNonEmptyString(xhttp, 'host', ds, 'host');
-        if (isPlainObject(xhttp.headers) && Object.keys(xhttp.headers).length > 0) {
-            ds.headers = { ...xhttp.headers };
+        if (isPlainObject(xhttp.headers)) {
+            const headers = copyStringHeaders(xhttp.headers);
+            if (Object.keys(headers).length > 0) {
+                ds.headers = headers;
+            }
         }
         // 下行 extra 中只有 xmux 能独立于上行：padding/session/seq 是协议要求两端一致的字段，
         // mihomo 继承上行正好满足；其余字段属于客户端上行或服务端，没有下行语义。
@@ -188,8 +203,11 @@ function serializeDownloadSettings(ds) {
     const xhttpSettings = {};
     if (typeof ds.path === 'string' && ds.path !== '') xhttpSettings.path = ds.path;
     if (typeof ds.host === 'string' && ds.host !== '') xhttpSettings.host = ds.host;
-    if (isPlainObject(ds.headers) && Object.keys(ds.headers).length > 0) {
-        xhttpSettings.headers = { ...ds.headers };
+    if (isPlainObject(ds.headers)) {
+        const headers = copyStringHeaders(ds.headers);
+        if (Object.keys(headers).length > 0) {
+            xhttpSettings.headers = headers;
+        }
     }
     if (isPlainObject(ds['reuse-settings']) && Object.keys(ds['reuse-settings']).length > 0) {
         const xmux = reuseSettingsToXmux(ds['reuse-settings']);
@@ -258,8 +276,11 @@ export function parseXhttpExtra(extra) {
     setRangeField(extra, 'scMaxEachPostBytes', opts, 'sc-max-each-post-bytes');
     setRangeField(extra, 'scMinPostsIntervalMs', opts, 'sc-min-posts-interval-ms');
 
-    if (isPlainObject(extra.headers) && Object.keys(extra.headers).length > 0) {
-        opts.headers = { ...extra.headers };
+    if (isPlainObject(extra.headers)) {
+        const headers = copyStringHeaders(extra.headers);
+        if (Object.keys(headers).length > 0) {
+            opts.headers = headers;
+        }
     }
 
     if (isPlainObject(extra.xmux) && Object.keys(extra.xmux).length > 0) {
@@ -330,10 +351,15 @@ export function serializeXhttpExtra(xhttpOpts) {
     getRange('sc-max-each-post-bytes', 'scMaxEachPostBytes');
     getRange('sc-min-posts-interval-ms', 'scMinPostsIntervalMs');
 
-    // Host 由 host 参数单独表达；留在 headers 里会让往返后的 Host 出现两个来源。
+    // Host 由 host 参数单独表达；头名大小写不敏感，避免小写 host 在往返后残留。
     if (isPlainObject(xhttpOpts.headers)) {
-        const { Host, ...rest } = xhttpOpts.headers;
-        if (Object.keys(rest).length > 0) extra.headers = rest;
+        const headers = copyStringHeaders(xhttpOpts.headers);
+        for (const key of Object.keys(headers)) {
+            if (key.toLowerCase() === 'host') {
+                delete headers[key];
+            }
+        }
+        if (Object.keys(headers).length > 0) extra.headers = headers;
     }
 
     if (

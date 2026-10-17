@@ -93,6 +93,30 @@ describe('parseXhttpExtra 正向映射', () => {
             },
         });
     });
+
+    it('应兼容数字范围、旧 session 字段名并跳过非字符串头值', () => {
+        const opts = parseXhttpExtra({
+            headers: { 'X-Text': 'ok', 'X-Number': 1, 'X-Array': ['a'] },
+            sessionPlacement: 'query',
+            sessionKey: 'k',
+            sessionIDLength: 12,
+            uplinkChunkSize: 2000,
+            scMaxEachPostBytes: 4000,
+            scMinPostsIntervalMs: 10,
+            xmux: { maxConnections: 2, hKeepAlivePeriod: 30 },
+        });
+
+        expect(opts).toEqual({
+            headers: { 'X-Text': 'ok' },
+            'session-placement': 'query',
+            'session-key': 'k',
+            'session-length': '12',
+            'uplink-chunk-size': '2000',
+            'sc-max-each-post-bytes': '4000',
+            'sc-min-posts-interval-ms': '10',
+            'reuse-settings': { 'max-connections': '2', 'h-keep-alive-period': 30 },
+        });
+    });
 });
 
 describe('serializeXhttpExtra 反向序列化', () => {
@@ -161,6 +185,14 @@ describe('serializeXhttpExtra 反向序列化', () => {
             })
         ).toBeNull();
     });
+
+    it('应剔除任意大小写的 Host 头', () => {
+        expect(serializeXhttpExtra({ headers: { host: 'lower.example.com', 'X-A': '1' } })).toEqual(
+            {
+                headers: { 'X-A': '1' },
+            }
+        );
+    });
 });
 
 const EXTRA_PARAM = encodeURIComponent(JSON.stringify(FULL_EXTRA));
@@ -191,6 +223,15 @@ describe('转换器接入', () => {
             // 补偿步骤始终显式写出 tls，缺省即 false。
             tls: false,
         });
+    });
+
+    it('URL 的 host 应覆盖 extra.headers 中任意大小写的 host', () => {
+        const url = buildXhttpUrl('security=none&host=url.example.com', {
+            headers: { host: 'extra-lower.example.com', 'X-A': '1' },
+        });
+        const opts = urlToClashProxy(url)['xhttp-opts'];
+
+        expect(opts.headers).toEqual({ 'X-A': '1', Host: 'url.example.com' });
     });
 
     it('extra 为非法 JSON 时仍按基础字段导入', () => {
@@ -232,6 +273,21 @@ describe('转换器接入', () => {
         expect(extra.xPaddingBytes).toBe('100-1000');
         expect(extra.sessionIDPlacement).toBe('query');
         expect(extra.xmux).toEqual({ maxConcurrency: '1' });
+    });
+
+    it('convertClashProxyToUrl 应从任意大小写的 Host 头推导 host 参数', () => {
+        const url = convertClashProxyToUrl({
+            name: 'node',
+            type: 'vless',
+            server: '1.2.3.4',
+            port: 443,
+            uuid: 'uuid',
+            network: 'xhttp',
+            'xhttp-opts': { headers: { host: 'only.example.com' } },
+        });
+
+        expect(url).toContain('host=only.example.com');
+        expect(url).not.toContain('extra=');
     });
 });
 
@@ -312,6 +368,24 @@ describe('downloadSettings 安全块映射', () => {
         });
         expect(warn).toHaveBeenCalled();
         warn.mockRestore();
+    });
+
+    it('security=none 时不读取任何安全块', () => {
+        const opts = parseXhttpExtra({
+            downloadSettings: {
+                address: 'dl.example.com',
+                security: 'none',
+                tlsSettings: {
+                    serverName: 'tls.example.com',
+                    fingerprint: 'firefox',
+                    allowInsecure: true,
+                },
+                realitySettings: { publicKey: 'pk', serverName: 'reality.example.com' },
+                xhttpSettings: { path: '/dl' },
+            },
+        });
+
+        expect(opts['download-settings']).toEqual({ server: 'dl.example.com', path: '/dl' });
     });
 });
 
@@ -491,5 +565,31 @@ describe('下行安全字段反向序列化', () => {
         expect(extra.downloadSettings.security).toBe('tls');
         expect(extra.downloadSettings.realitySettings).toBeUndefined();
         expect(extra.downloadSettings.tlsSettings.fingerprint).toBe('firefox');
+    });
+
+    it('下行 REALITY 应写回 realitySettings 并省略默认指纹', () => {
+        const extra = serializeXhttpExtra({
+            'download-settings': {
+                server: 'dl.example.com',
+                port: 443,
+                tls: true,
+                servername: 'target.example.com',
+                'client-fingerprint': 'chrome',
+                alpn: [],
+                'skip-cert-verify': false,
+                'reality-opts': { 'public-key': 'pk', 'short-id': 'sid' },
+            },
+        });
+
+        expect(extra.downloadSettings).toEqual({
+            address: 'dl.example.com',
+            port: 443,
+            security: 'reality',
+            realitySettings: {
+                publicKey: 'pk',
+                shortId: 'sid',
+                serverName: 'target.example.com',
+            },
+        });
     });
 });

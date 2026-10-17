@@ -198,9 +198,18 @@ function parseVlessUrl(url) {
                     const extraFields = parseXhttpExtra(JSON.parse(extraParam));
                     const { headers: extraHeaders, ...rest } = extraFields;
                     Object.assign(xhttpOpts, rest);
-                    // URL 的 host 参数是分享链接的显式声明，优先级高于 extra 里的同名头。
+                    // URL 的 host 参数是分享链接的显式声明，优先级高于 extra 里的同名头；
+                    // HTTP 头名大小写不敏感，小写 host 也要让位，避免同一头出现两份。
                     if (extraHeaders) {
-                        xhttpOpts.headers = { ...extraHeaders, ...(xhttpOpts.headers || {}) };
+                        const mergedHeaders = { ...extraHeaders };
+                        if (xhttpOpts.headers?.Host) {
+                            for (const key of Object.keys(mergedHeaders)) {
+                                if (key.toLowerCase() === 'host') {
+                                    delete mergedHeaders[key];
+                                }
+                            }
+                        }
+                        xhttpOpts.headers = { ...mergedHeaders, ...(xhttpOpts.headers || {}) };
                     }
                 } catch (e) {
                     // extra 非法时不能让整个订阅转换失败。
