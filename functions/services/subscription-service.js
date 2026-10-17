@@ -361,7 +361,13 @@ export function buildSubscriptionFilterFingerprint(sub = {}) {
     return JSON.stringify([exclude, operators, nodeTransform]);
 }
 
-async function readSubscriptionNodeCache(storage, sub) {
+/**
+ * 读取单机场订阅的保护性缓存（预览链路与输出链路共用）。
+ * @param {Object} storage 存储适配器
+ * @param {Object} sub 订阅对象（用于构建缓存 key）
+ * @returns {Promise<{nodes: string[], nodeCount: number, updatedAt: string, filterFingerprint?: string}|null>}
+ */
+export async function readSubscriptionNodeCache(storage, sub) {
     if (!storage?.get) return null;
     try {
         const cached = await storage.get(buildSubscriptionNodeCacheKey(sub));
