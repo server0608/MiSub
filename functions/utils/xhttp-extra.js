@@ -58,6 +58,42 @@ function parseDownloadSettings(settings) {
         ds.port = Math.trunc(settings.port);
     }
 
+    // Xray 的 downloadSettings 是独立 StreamConfig，security 缺省即 none；
+    // 这里只负责把“有 TLS / REALITY”映射为 true，false 由补偿步骤补齐。
+    const security = typeof settings.security === 'string' ? settings.security.toLowerCase() : '';
+    if (security === 'tls') {
+        ds.tls = true;
+        const tls = isPlainObject(settings.tlsSettings) ? settings.tlsSettings : null;
+        if (tls) {
+            setNonEmptyString(tls, 'serverName', ds, 'servername');
+            setNonEmptyString(tls, 'fingerprint', ds, 'client-fingerprint');
+            if (Array.isArray(tls.alpn) && tls.alpn.length > 0) {
+                const alpn = tls.alpn.filter((item) => typeof item === 'string');
+                if (alpn.length > 0) ds.alpn = alpn;
+            }
+            if (tls.allowInsecure === true) {
+                ds['skip-cert-verify'] = true;
+            }
+        }
+    } else if (security === 'reality') {
+        ds.tls = true;
+        // REALITY 下 Xray 只读 realitySettings；tlsSettings 即使存在也不参与握手。
+        const reality = isPlainObject(settings.realitySettings) ? settings.realitySettings : {};
+        setNonEmptyString(reality, 'serverName', ds, 'servername');
+        setNonEmptyString(reality, 'fingerprint', ds, 'client-fingerprint');
+        const publicKey = typeof reality.publicKey === 'string' ? reality.publicKey : '';
+        if (publicKey !== '') {
+            const realityOpts = { 'public-key': publicKey };
+            setNonEmptyString(reality, 'shortId', realityOpts, 'short-id');
+            ds['reality-opts'] = realityOpts;
+        } else {
+            // 声明 REALITY 却没有公钥时，显式清空比继承上行安全：
+            // 否则会拿上行公钥握手，表现为“能建立连接但认证必然失败”。
+            ds['reality-opts'] = { 'public-key': '' };
+            console.warn('[MiSub] XHTTP downloadSettings security=reality 缺少 publicKey');
+        }
+    }
+
     const xhttp = isPlainObject(settings.xhttpSettings) ? settings.xhttpSettings : null;
     if (xhttp) {
         setNonEmptyString(xhttp, 'path', ds, 'path');

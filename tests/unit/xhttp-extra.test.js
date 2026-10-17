@@ -1,5 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { parseXhttpExtra, serializeXhttpExtra } from '../../functions/utils/xhttp-extra.js';
+import { urlToClashProxy } from '../../functions/utils/url-to-clash.js';
+import { convertClashProxyToUrl } from '../../functions/utils/clash-to-url.js';
 
 // packet-up 模式下 extra 可用的完整字段集；同时覆盖下行非安全字段。
 const FULL_EXTRA = {
@@ -147,5 +149,133 @@ describe('serializeXhttpExtra 反向序列化', () => {
     it('不含 extra 字段时返回 null', () => {
         expect(serializeXhttpExtra({ path: '/x', host: 'h', mode: 'auto' })).toBeNull();
         expect(serializeXhttpExtra(null)).toBeNull();
+    });
+});
+
+const EXTRA_PARAM = encodeURIComponent(JSON.stringify(FULL_EXTRA));
+
+const XHTTP_URL =
+    'vless://uuid@1.2.3.4:443?encryption=none&security=none&type=xhttp' +
+    `&path=%2Fup&host=url.example.com&mode=packet-up&extra=${EXTRA_PARAM}#node`;
+
+describe('转换器接入', () => {
+    it('parseVlessUrl 应合并 extra，并让 URL 的 Host 优先于 extra.headers.Host', () => {
+        const proxy = urlToClashProxy(XHTTP_URL);
+        const opts = proxy['xhttp-opts'];
+
+        expect(opts.path).toBe('/up');
+        expect(opts.host).toBe('url.example.com');
+        expect(opts.headers).toEqual({
+            Host: 'url.example.com',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+        });
+        expect(opts['x-padding-bytes']).toBe('100-1000');
+        expect(opts['reuse-settings']['h-max-request-times']).toBe('0');
+        expect(opts['download-settings']).toEqual({
+            server: 'cf2.example.com',
+            port: 443,
+            path: '/dl',
+            host: 'cf3.example.com',
+            'reuse-settings': { 'max-concurrency': '1' },
+        });
+    });
+
+    it('extra 为非法 JSON 时仍按基础字段导入', () => {
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        const url = 'vless://uuid@1.2.3.4:443?type=xhttp&path=%2Fup&extra=%7Bnot-json';
+        const proxy = urlToClashProxy(url);
+
+        expect(proxy['xhttp-opts']).toEqual({ path: '/up' });
+        expect(warn).toHaveBeenCalled();
+        warn.mockRestore();
+    });
+
+    it('convertClashProxyToUrl 应输出 path/host/mode 与 extra', () => {
+        const url = convertClashProxyToUrl({
+            name: 'node',
+            type: 'vless',
+            server: '1.2.3.4',
+            port: 443,
+            uuid: 'uuid',
+            network: 'xhttp',
+            'xhttp-opts': {
+                path: '/up',
+                host: 'up.example.com',
+                mode: 'packet-up',
+                'x-padding-bytes': '100-1000',
+                'session-placement': 'query',
+                'reuse-settings': { 'max-concurrency': '1' },
+            },
+        });
+
+        expect(url).toContain('type=xhttp');
+        expect(url).toContain('path=%2Fup');
+        expect(url).toContain('host=up.example.com');
+        expect(url).toContain('mode=packet-up');
+
+        const match = url.match(/(?:\?|&)extra=([^&#]*)/);
+        expect(match).not.toBeNull();
+        const extra = JSON.parse(decodeURIComponent(match[1]));
+        expect(extra.xPaddingBytes).toBe('100-1000');
+        expect(extra.sessionIDPlacement).toBe('query');
+        expect(extra.xmux).toEqual({ maxConcurrency: '1' });
+    });
+});
+
+describe('downloadSettings 安全块映射', () => {
+    it('security 决定读取 tlsSettings 还是 realitySettings', () => {
+        const tlsOpts = parseXhttpExtra({
+            downloadSettings: {
+                address: 'dl.example.com',
+                port: 443,
+                security: 'tls',
+                tlsSettings: {
+                    serverName: 'tls.example.com',
+                    fingerprint: 'firefox',
+                    alpn: ['h2'],
+                    allowInsecure: true,
+                },
+                realitySettings: {
+                    serverName: 'reality.example.com',
+                    fingerprint: 'safari',
+                    publicKey: 'rpk',
+                    shortId: 'rsid',
+                },
+                xhttpSettings: { path: '/dl' },
+            },
+        });
+        expect(tlsOpts['download-settings']).toEqual({
+            server: 'dl.example.com',
+            port: 443,
+            tls: true,
+            servername: 'tls.example.com',
+            'client-fingerprint': 'firefox',
+            alpn: ['h2'],
+            'skip-cert-verify': true,
+            path: '/dl',
+        });
+
+        const realityOpts = parseXhttpExtra({
+            downloadSettings: {
+                address: 'dl.example.com',
+                port: 443,
+                security: 'reality',
+                tlsSettings: { serverName: 'tls.example.com', fingerprint: 'firefox' },
+                realitySettings: {
+                    serverName: 'reality.example.com',
+                    fingerprint: 'safari',
+                    publicKey: 'rpk',
+                    shortId: 'rsid',
+                },
+            },
+        });
+        expect(realityOpts['download-settings']).toEqual({
+            server: 'dl.example.com',
+            port: 443,
+            tls: true,
+            servername: 'reality.example.com',
+            'client-fingerprint': 'safari',
+            'reality-opts': { 'public-key': 'rpk', 'short-id': 'rsid' },
+        });
     });
 });

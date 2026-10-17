@@ -1,3 +1,5 @@
+import { serializeXhttpExtra } from './xhttp-extra.js';
+
 function base64Encode(str) {
     return btoa(unescape(encodeURIComponent(str)));
 }
@@ -215,6 +217,10 @@ export function convertClashProxyToUrl(proxy) {
                 const xhttpHost = xhttpOpts.host || xhttpOpts.headers?.Host;
                 if (xhttpHost) params.push(`host=${encodeURIComponent(xhttpHost)}`);
                 if (xhttpOpts.mode) params.push(`mode=${encodeURIComponent(xhttpOpts.mode)}`);
+                const extraObj = serializeXhttpExtra(xhttpOpts);
+                if (extraObj) {
+                    params.push(`extra=${encodeURIComponent(JSON.stringify(extraObj))}`);
+                }
             }
             const realityOpts = proxy['reality-opts'];
             if (realityOpts) {
