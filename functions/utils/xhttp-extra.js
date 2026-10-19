@@ -31,6 +31,23 @@ function copyStringHeaders(headers) {
     return result;
 }
 
+// Xray 的 StringList 同时接受数组与逗号分隔字符串（infra/conf/common.go），
+// 两种形态都要保留；空列表视为未配置。
+function readStringList(value) {
+    if (Array.isArray(value)) {
+        const list = value.filter((item) => typeof item === 'string' && item !== '');
+        return list.length > 0 ? list : null;
+    }
+    if (typeof value === 'string' && value !== '') {
+        const list = value
+            .split(',')
+            .map((item) => item.trim())
+            .filter((item) => item !== '');
+        return list.length > 0 ? list : null;
+    }
+    return null;
+}
+
 // Xray 的分包参数允许数字或区间字符串，mihomo 的配置层统一按字符串处理。
 function setRangeField(source, sourceKey, target, targetKey) {
     const value = source[sourceKey];
@@ -80,10 +97,8 @@ function parseDownloadSettings(settings) {
         if (tls) {
             setNonEmptyString(tls, 'serverName', ds, 'servername');
             setNonEmptyString(tls, 'fingerprint', ds, 'client-fingerprint');
-            if (Array.isArray(tls.alpn) && tls.alpn.length > 0) {
-                const alpn = tls.alpn.filter((item) => typeof item === 'string');
-                if (alpn.length > 0) ds.alpn = alpn;
-            }
+            const alpn = readStringList(tls.alpn);
+            if (alpn) ds.alpn = alpn;
             if (tls.allowInsecure === true) {
                 ds['skip-cert-verify'] = true;
             }
@@ -155,44 +170,101 @@ function reuseSettingsToXmux(reuse) {
     return xmux;
 }
 
-function serializeDownloadSettings(ds) {
+function serializeDownloadSettings(ds, upstream) {
     const out = {};
+    const context = isPlainObject(upstream) ? upstream : null;
 
-    if (typeof ds.server === 'string' && ds.server !== '') out.address = ds.server;
-    if (typeof ds.port === 'number' && Number.isFinite(ds.port)) out.port = Math.trunc(ds.port);
+    // mihomo 对 download-settings 的 server/port 也会回退到上行；
+    // Xray 的 downloadSettings.address 实际必填，反向导出时必须物化。
+    const server = typeof ds.server === 'string' && ds.server !== '' ? ds.server : context?.server;
+    if (typeof server === 'string' && server !== '') out.address = server;
+    const port =
+        typeof ds.port === 'number' && Number.isFinite(ds.port)
+            ? Math.trunc(ds.port)
+            : context?.port;
+    if (typeof port === 'number' && Number.isFinite(port)) out.port = Math.trunc(port);
 
-    // 空 public-key 既不是有效 REALITY，又是补偿步骤写入的清除标记，反向时不能当成 reality。
-    const publicKey = ds['reality-opts'] && ds['reality-opts']['public-key'];
-    const hasReality = typeof publicKey === 'string' && publicKey !== '';
-    if (hasReality) {
+    // mihomo 对下行缺省项按指针逐项回退到上行（adapter/outbound/vless.go:725-770）：
+    // 只有显式值才能切断继承。反向时必须把“生效值”物化，否则重新导入后安全层会退化。
+    const dsReality = isPlainObject(ds['reality-opts']) ? ds['reality-opts'] : null;
+    const dsPublicKey =
+        dsReality && typeof dsReality['public-key'] === 'string' ? dsReality['public-key'] : '';
+    const upstreamReality =
+        context &&
+        isPlainObject(context.realityOpts) &&
+        typeof context.realityOpts['public-key'] === 'string' &&
+        context.realityOpts['public-key'] !== ''
+            ? context.realityOpts
+            : null;
+    const explicitTls = typeof ds.tls === 'boolean' ? ds.tls : null;
+    const effectiveTls = explicitTls === null ? context?.tls === true : explicitTls;
+
+    // 显式空值（'' / [] / false）同样意味着“不要回退上行”，这里必须区分“字段缺失”。
+    const effectiveServerName =
+        typeof ds.servername === 'string'
+            ? ds.servername
+            : typeof context?.servername === 'string'
+              ? context.servername
+              : '';
+    const effectiveFingerprint =
+        typeof ds['client-fingerprint'] === 'string'
+            ? ds['client-fingerprint']
+            : typeof context?.clientFingerprint === 'string'
+              ? context.clientFingerprint
+              : '';
+    const effectiveAlpn = Array.isArray(ds.alpn)
+        ? ds.alpn
+        : Array.isArray(context?.alpn)
+          ? context.alpn
+          : null;
+    const effectiveSkipCertVerify =
+        typeof ds['skip-cert-verify'] === 'boolean'
+            ? ds['skip-cert-verify']
+            : context?.skipCertVerify === true;
+
+    // 空 public-key 既不是有效 REALITY，又是补偿步骤写入的清除标记；
+    // 但 reality-opts 存在本身就会阻止 mihomo 继承上行 REALITY。
+    let security = 'none';
+    if (dsReality) {
+        security = dsPublicKey !== '' ? 'reality' : effectiveTls ? 'tls' : 'none';
+    } else if (upstreamReality) {
+        security = 'reality';
+    } else if (effectiveTls) {
+        security = 'tls';
+    }
+
+    if (security === 'reality') {
         out.security = 'reality';
-        const realitySettings = { publicKey };
-        setNonEmptyString(ds['reality-opts'], 'short-id', realitySettings, 'shortId');
-        setNonEmptyString(ds, 'servername', realitySettings, 'serverName');
-        // chrome 是 Xray 两种 security 的缺省指纹；写回会把补偿产生的默认值固化成配置。
-        if (
-            typeof ds['client-fingerprint'] === 'string' &&
-            ds['client-fingerprint'] !== '' &&
-            ds['client-fingerprint'] !== 'chrome'
-        ) {
-            realitySettings.fingerprint = ds['client-fingerprint'];
+        const realitySettings = {};
+        if (dsPublicKey !== '') {
+            realitySettings.publicKey = dsPublicKey;
+            setNonEmptyString(dsReality, 'short-id', realitySettings, 'shortId');
+        } else if (upstreamReality) {
+            realitySettings.publicKey = upstreamReality['public-key'];
+            setNonEmptyString(upstreamReality, 'short-id', realitySettings, 'shortId');
+        }
+        if (effectiveServerName !== '') {
+            realitySettings.serverName = effectiveServerName;
+        }
+        // chrome 是 Xray 两种 security 的缺省指纹；写回会把缺省值固化成配置。
+        if (effectiveFingerprint !== '' && effectiveFingerprint !== 'chrome') {
+            realitySettings.fingerprint = effectiveFingerprint;
         }
         out.realitySettings = realitySettings;
-    } else if (ds.tls === true) {
+    } else if (security === 'tls') {
         out.security = 'tls';
         const tlsSettings = {};
-        setNonEmptyString(ds, 'servername', tlsSettings, 'serverName');
-        if (
-            typeof ds['client-fingerprint'] === 'string' &&
-            ds['client-fingerprint'] !== '' &&
-            ds['client-fingerprint'] !== 'chrome'
-        ) {
-            tlsSettings.fingerprint = ds['client-fingerprint'];
+        if (effectiveServerName !== '') {
+            tlsSettings.serverName = effectiveServerName;
         }
-        if (Array.isArray(ds.alpn) && ds.alpn.length > 0) {
-            tlsSettings.alpn = ds.alpn;
+        if (effectiveFingerprint !== '' && effectiveFingerprint !== 'chrome') {
+            tlsSettings.fingerprint = effectiveFingerprint;
         }
-        if (ds['skip-cert-verify'] === true) {
+        if (effectiveAlpn && effectiveAlpn.length > 0) {
+            const alpn = effectiveAlpn.filter((item) => typeof item === 'string' && item !== '');
+            if (alpn.length > 0) tlsSettings.alpn = alpn;
+        }
+        if (effectiveSkipCertVerify === true) {
             tlsSettings.allowInsecure = true;
         }
         if (Object.keys(tlsSettings).length > 0) {
@@ -205,6 +277,10 @@ function serializeDownloadSettings(ds) {
     if (typeof ds.host === 'string' && ds.host !== '') xhttpSettings.host = ds.host;
     if (isPlainObject(ds.headers)) {
         const headers = copyStringHeaders(ds.headers);
+        // 与上行一致：Host 由 host 参数表达；Xray 也禁止 xhttp headers 含 host。
+        for (const key of Object.keys(headers)) {
+            if (key.toLowerCase() === 'host') delete headers[key];
+        }
         if (Object.keys(headers).length > 0) {
             xhttpSettings.headers = headers;
         }
@@ -219,6 +295,10 @@ function serializeDownloadSettings(ds) {
     if (Object.keys(xhttpSettings).length > 0) {
         out.xhttpSettings = xhttpSettings;
     }
+
+    // Xray 的 downloadSettings 是独立 StreamConfig，缺 network 会按 tcp 构建，
+    // 下行 transport 无法成立；只有确有下行字段时才输出。
+    if (Object.keys(out).length > 0) out.network = 'xhttp';
 
     return out;
 }
@@ -304,15 +384,25 @@ export function parseXhttpExtra(extra) {
  * 把 mihomo xhttp-opts 逆向序列化为 Xray extra JSON 对象。
  * path/host/mode 不属于 extra，不输出。
  * @param {Object} xhttpOpts - mihomo xhttp-opts（含 path/host/mode 与 extra 派生字段）
+ * @param {Object} [upstream] - 代理级上下文，用于物化 mihomo 下行对上行安全配置的继承
  * @returns {Object|null} Xray extra 对象；不含任何 extra 字段时返回 null
  */
-export function serializeXhttpExtra(xhttpOpts) {
+export function serializeXhttpExtra(xhttpOpts, upstream = null) {
     if (!isPlainObject(xhttpOpts)) return null;
 
     const extra = {};
     const getString = (sourceKey, targetKey) => {
         if (typeof xhttpOpts[sourceKey] === 'string' && xhttpOpts[sourceKey] !== '') {
             extra[targetKey] = xhttpOpts[sourceKey];
+        }
+    };
+    // mihomo 的字符串字段经 WeaklyTypedInput 也接受数字（如 session-length: 16）。
+    const getStringOrNumber = (sourceKey, targetKey) => {
+        const value = xhttpOpts[sourceKey];
+        if (typeof value === 'string' && value !== '') {
+            extra[targetKey] = value;
+        } else if (typeof value === 'number' && Number.isFinite(value)) {
+            extra[targetKey] = String(Math.trunc(value));
         }
     };
     const getRange = (sourceKey, targetKey) => {
@@ -326,7 +416,7 @@ export function serializeXhttpExtra(xhttpOpts) {
 
     if (xhttpOpts['no-grpc-header'] === true) extra.noGRPCHeader = true;
 
-    getString('x-padding-bytes', 'xPaddingBytes');
+    getStringOrNumber('x-padding-bytes', 'xPaddingBytes');
     if (typeof xhttpOpts['x-padding-obfs-mode'] === 'boolean') {
         extra.xPaddingObfsMode = xhttpOpts['x-padding-obfs-mode'];
     }
@@ -340,7 +430,7 @@ export function serializeXhttpExtra(xhttpOpts) {
     getString('session-placement', 'sessionIDPlacement');
     getString('session-key', 'sessionIDKey');
     getString('session-table', 'sessionIDTable');
-    getString('session-length', 'sessionIDLength');
+    getStringOrNumber('session-length', 'sessionIDLength');
 
     getString('seq-placement', 'seqPlacement');
     getString('seq-key', 'seqKey');
@@ -371,7 +461,7 @@ export function serializeXhttpExtra(xhttpOpts) {
     }
 
     if (isPlainObject(xhttpOpts['download-settings'])) {
-        const ds = serializeDownloadSettings(xhttpOpts['download-settings']);
+        const ds = serializeDownloadSettings(xhttpOpts['download-settings'], upstream);
         if (Object.keys(ds).length > 0) extra.downloadSettings = ds;
     }
 

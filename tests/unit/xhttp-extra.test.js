@@ -161,12 +161,19 @@ describe('serializeXhttpExtra 反向序列化', () => {
             downloadSettings: {
                 address: 'cf2.example.com',
                 port: 443,
+                network: 'xhttp',
                 xhttpSettings: {
                     path: '/dl',
                     host: 'cf3.example.com',
                     extra: { xmux: { maxConcurrency: '1' } },
                 },
             },
+        });
+
+        // mihomo 的字符串字段经弱类型转换也接受数字
+        expect(serializeXhttpExtra({ 'x-padding-bytes': 1000, 'session-length': 16 })).toEqual({
+            xPaddingBytes: '1000',
+            sessionIDLength: '16',
         });
     });
 
@@ -186,12 +193,21 @@ describe('serializeXhttpExtra 反向序列化', () => {
         ).toBeNull();
     });
 
-    it('应剔除任意大小写的 Host 头', () => {
+    it('应剔除上下行 headers 中任意大小写的 Host 头', () => {
         expect(serializeXhttpExtra({ headers: { host: 'lower.example.com', 'X-A': '1' } })).toEqual(
             {
                 headers: { 'X-A': '1' },
             }
         );
+        expect(
+            serializeXhttpExtra({
+                'download-settings': {
+                    server: 'cdn.example.com',
+                    port: 443,
+                    headers: { Host: 'dl.example.com', 'X-A': '1' },
+                },
+            }).downloadSettings.xhttpSettings.headers
+        ).toEqual({ 'X-A': '1' });
     });
 });
 
@@ -301,7 +317,8 @@ describe('downloadSettings 安全块映射', () => {
                 tlsSettings: {
                     serverName: 'tls.example.com',
                     fingerprint: 'firefox',
-                    alpn: ['h2'],
+                    // Xray 的 StringList 同时接受字符串形式
+                    alpn: 'h2, http/1.1',
                     allowInsecure: true,
                 },
                 realitySettings: {
@@ -319,7 +336,7 @@ describe('downloadSettings 安全块映射', () => {
             tls: true,
             servername: 'tls.example.com',
             'client-fingerprint': 'firefox',
-            alpn: ['h2'],
+            alpn: ['h2', 'http/1.1'],
             'skip-cert-verify': true,
             path: '/dl',
         });
@@ -533,6 +550,7 @@ describe('下行安全字段反向序列化', () => {
         expect(extra.downloadSettings).toEqual({
             address: 'cf2.example.com',
             port: 443,
+            network: 'xhttp',
             security: 'tls',
             tlsSettings: {
                 serverName: 'cf2.example.com',
@@ -584,6 +602,7 @@ describe('下行安全字段反向序列化', () => {
         expect(extra.downloadSettings).toEqual({
             address: 'dl.example.com',
             port: 443,
+            network: 'xhttp',
             security: 'reality',
             realitySettings: {
                 publicKey: 'pk',
@@ -591,5 +610,84 @@ describe('下行安全字段反向序列化', () => {
                 serverName: 'target.example.com',
             },
         });
+    });
+});
+
+describe('下行继承的反向物化', () => {
+    it('Clash 源依赖下行继承 REALITY 时，Clash→URL→Clash 仍保持 REALITY', () => {
+        const url = convertClashProxyToUrl({
+            name: 'node',
+            type: 'vless',
+            server: '1.2.3.4',
+            port: 443,
+            uuid: 'uuid',
+            network: 'xhttp',
+            tls: true,
+            servername: 'up.example.com',
+            'client-fingerprint': 'firefox',
+            'reality-opts': { 'public-key': 'upPbk', 'short-id': 'abcd' },
+            'xhttp-opts': {
+                path: '/up',
+                mode: 'stream-up',
+                'download-settings': { server: 'cdn.example.com', port: 443 },
+            },
+        });
+        const extra = JSON.parse(decodeURIComponent(url.match(/(?:\?|&)extra=([^&#]*)/)[1]));
+
+        expect(extra.downloadSettings.network).toBe('xhttp');
+        expect(extra.downloadSettings.security).toBe('reality');
+        expect(extra.downloadSettings.realitySettings).toEqual({
+            publicKey: 'upPbk',
+            shortId: 'abcd',
+            serverName: 'up.example.com',
+            fingerprint: 'firefox',
+        });
+
+        const ds = urlToClashProxy(url)['xhttp-opts']['download-settings'];
+        expect(ds.tls).toBe(true);
+        expect(ds['reality-opts']).toEqual({ 'public-key': 'upPbk', 'short-id': 'abcd' });
+        expect(ds.servername).toBe('up.example.com');
+    });
+
+    it('Clash 源依赖下行继承 TLS 时保持 TLS，显式 tls:false 则不继承', () => {
+        const proxy = {
+            name: 'node',
+            type: 'vless',
+            server: '1.2.3.4',
+            port: 443,
+            uuid: 'uuid',
+            network: 'xhttp',
+            tls: true,
+            servername: 'up.example.com',
+            alpn: ['h2'],
+            'xhttp-opts': {
+                path: '/up',
+                mode: 'stream-up',
+                'download-settings': { server: 'cdn.example.com', port: 443 },
+            },
+        };
+
+        const url = convertClashProxyToUrl(proxy);
+        const extra = JSON.parse(decodeURIComponent(url.match(/(?:\?|&)extra=([^&#]*)/)[1]));
+        expect(extra.downloadSettings.security).toBe('tls');
+        expect(extra.downloadSettings.tlsSettings).toEqual({
+            serverName: 'up.example.com',
+            alpn: ['h2'],
+        });
+
+        const ds = urlToClashProxy(url)['xhttp-opts']['download-settings'];
+        expect(ds.tls).toBe(true);
+        expect(ds.servername).toBe('up.example.com');
+        expect(ds.alpn).toEqual(['h2']);
+
+        const offUrl = convertClashProxyToUrl({
+            ...proxy,
+            'xhttp-opts': {
+                ...proxy['xhttp-opts'],
+                'download-settings': { server: 'cdn.example.com', port: 443, tls: false },
+            },
+        });
+        const offExtra = JSON.parse(decodeURIComponent(offUrl.match(/(?:\?|&)extra=([^&#]*)/)[1]));
+        expect(offExtra.downloadSettings.security).toBeUndefined();
     });
 });
