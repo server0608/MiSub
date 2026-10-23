@@ -155,8 +155,17 @@ export async function handleProfileMode(
         });
     }
 
-    const targetSubscriptions = targetMisubs.filter((sub) => !/^https?:\/\/[^/?#]+:\d+(?:[/?#]|$)/i.test(sub.url));
-    const manualNodes = targetMisubs.filter((sub) => !targetSubscriptions.includes(sub));
+    const httpProxyPattern = /^https?:\/\/[^/?#]+:\d+(?:[/?#]|$)/i;
+    const targetSubscriptions = targetMisubs.filter((sub) => !httpProxyPattern.test(sub.url));
+    const httpProxyNodes = targetMisubs.filter((sub) => httpProxyPattern.test(sub.url));
+    const seenManualIds = new Set();
+    const manualNodes = [];
+    for (const node of [...httpProxyNodes, ...targetManualNodes]) {
+        const key = node?.id || node?.url;
+        if (!node || (key && seenManualIds.has(key))) continue;
+        if (key) seenManualIds.add(key);
+        manualNodes.push(node);
+    }
     // 处理手工节点（直接解析节点URL），并将用户自定义名称写入 URL。
     const manualNodeResults = manualNodes.map((node) => {
         const customName = typeof node.name === 'string' ? node.name.trim() : '';
