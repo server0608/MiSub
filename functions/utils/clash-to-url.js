@@ -277,6 +277,8 @@ export function convertClashProxyToUrl(proxy) {
             const sni = proxy.servername ?? proxy.sni;
             if (sni !== undefined) params.push(`sni=${encodeURIComponent(sni)}`);
             if (proxy.skipCertVerify || proxy['skip-cert-verify']) params.push('insecure=1');
+            // 证书指纹固定，保证自签证书节点导出后仍可校验
+            if (proxy.fingerprint) params.push(`pinSHA256=${encodeURIComponent(proxy.fingerprint)}`);
             if (proxy.ports !== undefined) params.push(`ports=${encodeURIComponent(proxy.ports)}`);
             if (proxy['hop-interval'] !== undefined)
                 params.push(`hop-interval=${encodeURIComponent(proxy['hop-interval'])}`);
