@@ -3,7 +3,6 @@
  */
 
 export const COMMON_NODE_PROTOCOLS = [
-    'v2rayn',
     'ss',
     'ssr',
     'vmess',
