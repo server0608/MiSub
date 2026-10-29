@@ -767,10 +767,11 @@ function parseHysteria2Url(url) {
             auth: password,
         };
 
-        // SNI
-        if (params.get('sni')) {
-            proxy.servername = params.get('sni');
-            proxy.sni = params.get('sni');
+        // SNI（兼容 Shadowrocket 的 peer 参数）
+        const sniParam = params.get('sni') || params.get('peer');
+        if (sniParam) {
+            proxy.servername = sniParam;
+            proxy.sni = sniParam;
         }
 
         // Skip cert verify
@@ -783,6 +784,10 @@ function parseHysteria2Url(url) {
         if (handshakeTimeout) {
             proxy['handshake-timeout'] = parseInt(handshakeTimeout, 10);
         }
+
+        // 证书指纹固定（兼容 pinSHA256 / hpkp / fingerprint），自签证书场景必需
+        const pinParam = params.get('pinSHA256') || params.get('hpkp') || params.get('fingerprint');
+        if (pinParam) proxy.fingerprint = pinParam;
 
         // Obfs
         if (params.get('obfs')) {
@@ -798,6 +803,9 @@ function parseHysteria2Url(url) {
         if (params.get('hop-interval')) proxy['hop-interval'] = params.get('hop-interval');
         if (params.get('up')) proxy.up = params.get('up');
         if (params.get('down')) proxy.down = params.get('down');
+        // 兼容 Shadowrocket / v2rayN 的 upmbps / downmbps
+        if (!proxy.up && params.get('upmbps')) proxy.up = `${params.get('upmbps')} Mbps`;
+        if (!proxy.down && params.get('downmbps')) proxy.down = `${params.get('downmbps')} Mbps`;
         const fastOpen = params.get('fast_open') || params.get('fast-open');
         if (fastOpen === '1' || fastOpen === 'true') {
             proxy['fast-open'] = true;
