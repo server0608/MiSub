@@ -18,7 +18,7 @@ const BULK_IMPORT_NODE_REGEX = createProtocolRegex(BULK_IMPORT_NODE_PROTOCOLS, f
  * - Clash / mihomo YAML（proxies: ...）
  * - sing-box JSON（{"outbounds": [...]}）
  */
-function needsServerParsing(text) {
+export function needsServerParsing(text) {
     if (/^v2rayn:\/\//im.test(text)) return true;
     if (/^\s*proxies\s*:/im.test(text)) return true;
     const trimmed = text.trim();
